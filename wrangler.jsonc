@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kaigo-db",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  // D1 バインディング。
+  // `wrangler d1 create kaigo-db` を実行して出力された database_id をここに貼る。
+  // account_id も自分のアカウントIDに置き換える（未設定でも wrangler login 済みなら対話的に解決される）。
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kaigo-db",
+      "database_id": "PLACEHOLDER_RUN_WRANGLER_D1_CREATE"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

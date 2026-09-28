@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/* ===== かいごDB デザイントークン =====
+   実用ツール寄り。白基調＋アクセント1色（濃紺）。
+   丸ゴシック・パステル・不要な影は使わない。数字と表の可読性を最優先。 */
+@theme {
+  --color-ink: #16181c;
+  --color-muted: #5c6470;
+  --color-muted-2: #8b929c;
+
+  --color-line: #e3e6ea;
+  --color-line-strong: #c7ccd3;
+
+  --color-surface: #ffffff;
+  --color-paper: #f7f8f9;
+  --color-tint: #f4f6f9;
+
+  --color-accent: #15509a;
+  --color-accent-strong: #0f3f7c;
+  --color-accent-weak: #eaf0f8;
+
+  --font-sans: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo,
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "palt";
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+}
+
+/* 数字は等幅で縦に揃える（定員・件数・距離） */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: inherit;
+}
+
+:where(a, button, input, select):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 見出し。装飾せず階層だけで区切る */
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+}

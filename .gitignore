@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.open-next
+.wrangler
+.dev.vars
+.env*
+*.tsbuildinfo
+.DS_Store
+
+# データ本体（生成物・巨大）はコミットしない
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/d1/
+raw/
