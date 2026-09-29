@@ -5,6 +5,7 @@ const NAV = [
   { href: "/", label: "現在地から探す" },
   { href: "/type/", label: "サービス種別" },
   { href: "/area/", label: "エリア" },
+  { href: "/ranking/", label: "並べ替えて探す" },
   { href: "/data/", label: "データについて" },
 ];
 

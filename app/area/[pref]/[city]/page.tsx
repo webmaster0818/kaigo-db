@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { queries } from "@/lib/db";
+import { queries, toCitySort, type CitySort } from "@/lib/db";
+import { NOT_A_RECOMMENDATION } from "@/lib/ranking";
 import { SLUG_TO_PREF } from "@/lib/slug";
 import { abs, decodeParam, NO_DATA, seg } from "@/lib/site";
 import { listRobots } from "@/lib/indexing";
@@ -13,6 +14,13 @@ import EmptyState from "@/components/EmptyState";
 export const dynamic = "force-dynamic";
 
 const LIST_LIMIT = 300;
+
+/** 並べ替えの根拠。表示している順番が何に基づくのかを必ず書く。 */
+const SORT_BASIS: Record<CitySort, string> = {
+  default: "住まい（入居系）を先に、次にサービス種別名・事業所名の五十音順で並べています。",
+  capacity: "厚生労働省の公表データの「定員」の値が大きい順に並べています（定員の記載がない施設は末尾です）。",
+  name: "事業所名の順に並べています。",
+};
 
 type Params = Promise<{ pref: string; city: string }>;
 
@@ -32,16 +40,26 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-export default async function CityPage({ params }: { params: Params }) {
+export default async function CityPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { pref: prefRaw, city: cityRaw } = await params;
   const pref = decodeParam(prefRaw);
   const city = decodeParam(cityRaw);
   if (!SLUG_TO_PREF[pref]) notFound();
 
+  const sp = await searchParams;
+  const sortRaw = Array.isArray(sp.sort) ? sp.sort[0] : sp.sort;
+  const sort = toCitySort(sortRaw);
+
   const [meta, area, rows] = await Promise.all([
     queries.meta(),
     queries.area(pref, city),
-    queries.facilitiesByCity(pref, city, LIST_LIMIT),
+    queries.facilitiesByCity(pref, city, LIST_LIMIT, 0, sort),
   ]);
 
   const prefName = area?.prefecture ?? SLUG_TO_PREF[pref];
@@ -103,6 +121,34 @@ export default async function CityPage({ params }: { params: Params }) {
               ))}
             </ul>
           )}
+
+          {/* ---- 並べ替え ---- */}
+          <form method="get" className="mb-3 flex flex-wrap items-end gap-2 border-y border-line py-2">
+            <label className="block text-xs">
+              <span className="text-muted">並べ替え</span>
+              <select
+                name="sort"
+                defaultValue={sort}
+                className="ml-2 rounded border border-line-strong bg-surface px-2 py-1 text-sm"
+              >
+                <option value="default">種別順（住まい→在宅）</option>
+                <option value="capacity">定員が多い順</option>
+                <option value="name">事業所名順</option>
+              </select>
+            </label>
+            <button type="submit" className="rounded border border-line-strong px-3 py-1 text-xs hover:bg-tint">
+              並べ替える
+            </button>
+            <span className="text-xs text-muted">
+              近い順で探すには
+              <Link href="/" className="ml-1 text-accent hover:underline">現在地からの距離検索</Link>
+              をご利用ください。
+            </span>
+          </form>
+          <p className="mb-3 text-xs leading-relaxed text-muted">
+            {SORT_BASIS[sort]}
+            <span className="ml-1 font-bold text-ink">{NOT_A_RECOMMENDATION}</span>
+          </p>
 
           <FacilityTable rows={rows} hideCity />
 

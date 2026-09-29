@@ -27,7 +27,10 @@ personal-gym-navi と同じ構成を踏襲。
 1. **欠損は推測で埋めない。**空欄は「記載なし」と表示する。
 2. **公式URLか定員のいずれかがある施設のみ index。**それ以外は `noindex, follow`。判定は `lib/indexing.ts` の `isIndexableFacility()` に集約（import 時の `facility.is_indexable` とページの `robots` が同じ関数を使う）。
 3. **CC BY 4.0 の出典表示を、データを使う全ページの本文内に出す**（`components/SourceNote.tsx`）。取得日は `meta.acquired_on` から読む。
-4. **口コミ・独自評価・ランキングは作らない。**
+4. **口コミ・独自評価は作らない。**星・点数・おすすめ・No.1 などの評価表現も使わない。
+5. **複数項目を重み付けして合成した「総合ランキング」は作らない。**重みの根拠を説明できないため。
+   代わりに、公表データの値そのもの1本で並べ替えた一覧（`/ranking/*`）を置く。
+   各ページに「何の値で並べているか」と「この並び順は当サイトによる評価・推薦ではありません」を必ず書く（`lib/ranking.ts` に文言を集約）。
 
 ---
 
@@ -38,7 +41,8 @@ schema.sql                     D1/SQLite スキーマ
 scripts/import.ts              CSV → SQLite + D1投入用SQL
 lib/db.ts                      D1 / better-sqlite3 抽象化（データ無しでも落ちない）
 lib/geo.ts                     Haversine + バウンディングボックス（D1に三角関数が無い前提）
-lib/indexing.ts                index/noindex 判定
+lib/indexing.ts                index/noindex 判定（施設 + 並べ替え一覧）
+lib/ranking.ts                 並べ替えの軸の定義・共通文言・クエリパラメータの検証
 lib/serviceTypes.ts            サービス種別 → スラッグ（未知種別は svc-<hash> を自動採番）
 lib/slug.ts                    都道府県・市区町村・法人のスラッグ生成
 lib/site.ts                    サイト定数・出典情報・「記載なし」
@@ -51,6 +55,10 @@ app/facility/[id]/page.tsx     /facility/1370100001/ … 施設詳細
 app/type/page.tsx              /type/ … サービス種別一覧
 app/type/[type]/page.tsx       /type/tokuyo/ … 種別ごとの一覧
 app/hojin/[slug]/page.tsx      /hojin/<法人スラッグ>/ … 法人ごとの事業所
+app/ranking/page.tsx           /ranking/ … 並べ替えの軸の一覧（根拠を1行で説明）
+app/ranking/capacity/page.tsx  /ranking/capacity/ … 定員が多い順（定員の記載がある施設のみ）
+app/ranking/hojin-scale/page.tsx /ranking/hojin-scale/ … 同一法人の運営施設数が多い順
+app/ranking/area-density/page.tsx /ranking/area-density/ … 市区町村あたりの施設数が多い順
 app/data/page.tsx              /data/ … 件数と項目ごとの充足率
 app/sitemap.ts / app/robots.ts index対象のみを sitemap に出す
 ```

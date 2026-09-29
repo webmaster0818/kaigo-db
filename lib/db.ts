@@ -52,6 +52,12 @@ export interface AreaRow {
   facility_count: number;
 }
 
+/** /ranking/* の絞り込み条件。値はスラッグ（呼び出し側で実在チェック済みのもの） */
+export interface RankingFilter {
+  prefSlug?: string;
+  typeSlug?: string;
+}
+
 export interface TypeCount {
   service_type: string;
   service_type_slug: string;
@@ -150,6 +156,34 @@ async function safeGet<T>(sql: string, params: unknown[] = []): Promise<T | unde
 const FACILITY_COLS =
   "id, name, service_type, service_type_slug, is_residential, postal_code, prefecture, pref_slug, city, city_slug, address, lat, lng, tel, corporation_name, corporation_slug, capacity, open_days, official_url, acquired_on, is_indexable";
 
+/**
+ * /ranking/* の絞り込みを WHERE 句の続き（" AND ..."）に変換する。
+ * 値は必ずプレースホルダで渡す（SQLに文字列を埋め込まない）。
+ */
+function rankFilter(f: RankingFilter): { sql: string; params: unknown[] } {
+  const parts: string[] = [];
+  const params: unknown[] = [];
+  if (f.prefSlug) { parts.push("pref_slug = ?"); params.push(f.prefSlug); }
+  if (f.typeSlug) { parts.push("service_type_slug = ?"); params.push(f.typeSlug); }
+  return { sql: parts.length ? ` AND ${parts.join(" AND ")}` : "", params };
+}
+
+/**
+ * 市区町村ページの並べ替え。
+ * ORDER BY にユーザー入力を入れないよう、許可した並びだけを固定の文字列で持つ。
+ */
+export const CITY_SORTS = {
+  default: "is_residential DESC, service_type ASC, name ASC",
+  capacity: "CASE WHEN capacity IS NULL OR capacity <= 0 THEN 1 ELSE 0 END ASC, capacity DESC, name ASC",
+  name: "name ASC",
+} as const;
+
+export type CitySort = keyof typeof CITY_SORTS;
+
+export function toCitySort(v: string | undefined): CitySort {
+  return v === "capacity" || v === "name" ? v : "default";
+}
+
 export const queries = {
   // ---- meta ----
   async meta(): Promise<Record<string, string>> {
@@ -202,11 +236,17 @@ export const queries = {
     );
   },
 
-  async facilitiesByCity(prefSlug: string, citySlug: string, limit = 200, offset = 0): Promise<Facility[]> {
+  async facilitiesByCity(
+    prefSlug: string,
+    citySlug: string,
+    limit = 200,
+    offset = 0,
+    sort: CitySort = "default",
+  ): Promise<Facility[]> {
     return safeAll<Facility>(
       `SELECT ${FACILITY_COLS} FROM facility
        WHERE pref_slug = ? AND city_slug = ?
-       ORDER BY is_residential DESC, service_type, name
+       ORDER BY ${CITY_SORTS[sort] ?? CITY_SORTS.default}
        LIMIT ? OFFSET ?`,
       [prefSlug, citySlug, limit, offset],
     );
@@ -272,6 +312,134 @@ export const queries = {
       "SELECT slug, name, facility_count, pref_count FROM corporation ORDER BY facility_count DESC, name LIMIT ?",
       [limit],
     );
+  },
+
+  // ---- 並べ替え一覧（/ranking/*） ----
+  //
+  // 「合成した総合スコア」は作らない。出典データの値そのもの1本で並べる。
+  // 同値のときの二次キーは名称など安定するものにして、リロードで順番が入れ替わらないようにする。
+
+  /**
+   * 定員が多い順。
+   * 定員が NULL / 0 以下の行は対象から外す（順位に含めない）。
+   * 「定員が少ない」のではなく「記載が無い」だけなので、下位に並べることもしない。
+   */
+  async facilitiesByCapacity(f: RankingFilter = {}, limit = 100, offset = 0): Promise<Facility[]> {
+    const w = rankFilter(f);
+    return safeAll<Facility>(
+      `SELECT ${FACILITY_COLS} FROM facility
+       WHERE capacity IS NOT NULL AND capacity > 0${w.sql}
+       ORDER BY capacity DESC, name ASC, id ASC
+       LIMIT ? OFFSET ?`,
+      [...w.params, limit, offset],
+    );
+  },
+
+  /** 定員の記載率（絞り込み条件の中での実測値） */
+  async capacityStats(f: RankingFilter = {}): Promise<{ total: number; with_capacity: number }> {
+    const w = rankFilter(f);
+    const r = await safeGet<{ total: number; with_capacity: number }>(
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN capacity IS NOT NULL AND capacity > 0 THEN 1 ELSE 0 END) AS with_capacity
+       FROM facility WHERE 1 = 1${w.sql}`,
+      w.params,
+    );
+    return { total: Number(r?.total ?? 0), with_capacity: Number(r?.with_capacity ?? 0) };
+  },
+
+  /**
+   * 同一法人が運営する施設数が多い順。
+   * 絞り込みが無いときは import 時に集計済みの corporation テーブルをそのまま読む。
+   * 絞り込みがあるときは「その条件の中での施設数」に意味が変わるため facility から集計し直す。
+   */
+  async corporationsByScale(f: RankingFilter = {}, limit = 100, offset = 0): Promise<Corporation[]> {
+    if (!f.prefSlug && !f.typeSlug) {
+      return safeAll<Corporation>(
+        `SELECT slug, name, facility_count, pref_count FROM corporation
+         WHERE facility_count > 0
+         ORDER BY facility_count DESC, pref_count DESC, name ASC
+         LIMIT ? OFFSET ?`,
+        [limit, offset],
+      );
+    }
+    const w = rankFilter(f);
+    return safeAll<Corporation>(
+      `SELECT corporation_slug AS slug, corporation_name AS name,
+              COUNT(*) AS facility_count, COUNT(DISTINCT pref_slug) AS pref_count
+       FROM facility
+       WHERE corporation_slug IS NOT NULL AND corporation_slug <> ''${w.sql}
+       GROUP BY corporation_slug, corporation_name
+       ORDER BY facility_count DESC, pref_count DESC, name ASC
+       LIMIT ? OFFSET ?`,
+      [...w.params, limit, offset],
+    );
+  },
+
+  /** 上の並びの総行数（「全N件のうち先頭M件」表示用） */
+  async corporationScaleCount(f: RankingFilter = {}): Promise<number> {
+    if (!f.prefSlug && !f.typeSlug) {
+      const r = await safeGet<{ n: number }>("SELECT COUNT(*) AS n FROM corporation WHERE facility_count > 0", []);
+      return Number(r?.n ?? 0);
+    }
+    const w = rankFilter(f);
+    const r = await safeGet<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM (
+         SELECT corporation_slug FROM facility
+         WHERE corporation_slug IS NOT NULL AND corporation_slug <> ''${w.sql}
+         GROUP BY corporation_slug, corporation_name)`,
+      w.params,
+    );
+    return Number(r?.n ?? 0);
+  },
+
+  /**
+   * 市区町村あたりの施設数が多い順。
+   * 種別の絞り込みが無いときは area テーブル（import 時に集計済み）を読む。
+   * 種別で絞るときは facility から集計し直す（area は種別を持たないため）。
+   */
+  async areasByDensity(f: RankingFilter = {}, limit = 100, offset = 0): Promise<AreaRow[]> {
+    if (!f.typeSlug) {
+      const prefClause = f.prefSlug ? " AND pref_slug = ?" : "";
+      const prefParams = f.prefSlug ? [f.prefSlug] : [];
+      return safeAll<AreaRow>(
+        `SELECT pref_slug, prefecture, city_slug, city, facility_count FROM area
+         WHERE facility_count > 0${prefClause}
+         ORDER BY facility_count DESC, prefecture ASC, city ASC
+         LIMIT ? OFFSET ?`,
+        [...prefParams, limit, offset],
+      );
+    }
+    const w = rankFilter(f);
+    return safeAll<AreaRow>(
+      `SELECT pref_slug, prefecture, city_slug, city, COUNT(*) AS facility_count
+       FROM facility
+       WHERE city_slug IS NOT NULL AND city_slug <> ''${w.sql}
+       GROUP BY pref_slug, prefecture, city_slug, city
+       ORDER BY facility_count DESC, prefecture ASC, city ASC
+       LIMIT ? OFFSET ?`,
+      [...w.params, limit, offset],
+    );
+  },
+
+  async areaDensityCount(f: RankingFilter = {}): Promise<number> {
+    if (!f.typeSlug) {
+      const prefClause = f.prefSlug ? " AND pref_slug = ?" : "";
+      const prefParams = f.prefSlug ? [f.prefSlug] : [];
+      const r = await safeGet<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM area WHERE facility_count > 0${prefClause}`,
+        prefParams,
+      );
+      return Number(r?.n ?? 0);
+    }
+    const w = rankFilter(f);
+    const r = await safeGet<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM (
+         SELECT city_slug FROM facility
+         WHERE city_slug IS NOT NULL AND city_slug <> ''${w.sql}
+         GROUP BY pref_slug, city_slug)`,
+      w.params,
+    );
+    return Number(r?.n ?? 0);
   },
 
   // ---- 近傍検索 ----

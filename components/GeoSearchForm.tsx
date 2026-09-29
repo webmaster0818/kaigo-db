@@ -15,7 +15,7 @@ export default function GeoSearchForm({
   defaults,
 }: {
   types: TypeCount[];
-  defaults: { lat?: string; lng?: string; radius?: string; type?: string };
+  defaults: { lat?: string; lng?: string; radius?: string; type?: string; sort?: string };
 }) {
   const [lat, setLat] = useState(defaults.lat ?? "");
   const [lng, setLng] = useState(defaults.lng ?? "");
@@ -40,7 +40,7 @@ export default function GeoSearchForm({
 
   return (
     <form method="get" action="/" className="rounded border border-line bg-surface p-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <label className="block text-xs">
           <span className="text-muted">緯度</span>
           <input
@@ -88,6 +88,19 @@ export default function GeoSearchForm({
                 {t.service_type}
               </option>
             ))}
+          </select>
+        </label>
+
+        {/* 「近い順」はこの検索そのもの。並べ替えの軸として明示する。 */}
+        <label className="block text-xs">
+          <span className="text-muted">並べ替え</span>
+          <select
+            name="sort"
+            defaultValue={defaults.sort ?? "distance"}
+            className="mt-1 w-full rounded border border-line-strong bg-surface px-2 py-1.5 text-sm"
+          >
+            <option value="distance">近い順（直線距離）</option>
+            <option value="capacity">定員が多い順</option>
           </select>
         </label>
       </div>

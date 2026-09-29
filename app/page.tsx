@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { queries } from "@/lib/db";
 import { isValidJapanLatLng } from "@/lib/geo";
 import { abs, NO_DATA, seg, SITE_NAME } from "@/lib/site";
+import { NOT_A_RECOMMENDATION, RANKING_AXES } from "@/lib/ranking";
 import GeoSearchForm from "@/components/GeoSearchForm";
 import FacilityTable from "@/components/FacilityTable";
 import EmptyState from "@/components/EmptyState";
@@ -27,6 +28,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const lngRaw = one(sp.lng);
   const radiusRaw = one(sp.radius);
   const typeRaw = one(sp.type);
+  // 並べ替えの軸。既定は「近い順」（この検索そのものが距離での並べ替え）。
+  const sort = one(sp.sort) === "capacity" ? "capacity" : "distance";
 
   const lat = latRaw ? Number(latRaw) : NaN;
   const lng = lngRaw ? Number(lngRaw) : NaN;
@@ -42,9 +45,23 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     queries.topCorporations(12),
   ]);
 
-  const results = hasQuery && validPoint
+  const found = hasQuery && validPoint
     ? await queries.nearby({ lat, lng }, radius, { typeSlug: typeRaw || undefined, limit: 50 })
     : [];
+
+  // nearby() は距離の昇順で返る。定員順にするときだけ並べ直す。
+  // 定員の記載が無い施設は「定員が小さい」わけではないので、末尾にまとめて距離順で置く。
+  const results =
+    sort === "capacity"
+      ? [...found].sort((a, b) => {
+          const ac = a.capacity ?? null;
+          const bc = b.capacity ?? null;
+          if (ac == null && bc == null) return a.distance_km - b.distance_km;
+          if (ac == null) return 1;
+          if (bc == null) return -1;
+          return bc - ac || a.distance_km - b.distance_km;
+        })
+      : found;
 
   const residential = types.filter((t) => t.is_residential === 1);
   const homeCare = types.filter((t) => t.is_residential !== 1);
@@ -61,7 +78,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
 
       <GeoSearchForm
         types={types}
-        defaults={{ lat: latRaw, lng: lngRaw, radius: radiusRaw, type: typeRaw }}
+        defaults={{ lat: latRaw, lng: lngRaw, radius: radiusRaw, type: typeRaw, sort }}
       />
 
       {/* ---- 検索結果 ---- */}
@@ -75,6 +92,17 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               </span>
             )}
           </h2>
+          {/* 並べ替えの根拠を必ず明示する（評価・推薦ではないことも併記） */}
+          {validPoint && total > 0 && (
+            <div className="mb-3 border-y border-line py-2 text-xs leading-relaxed">
+              <p>
+                {sort === "capacity"
+                  ? "厚生労働省の公表データの「定員」の値が大きい順に並べています（定員の記載がない施設は末尾に、近い順で置いています）。"
+                  : "入力された緯度・経度から各施設の緯度・経度までの直線距離が短い順に並べています（道のりではありません）。"}
+              </p>
+              <p className="mt-0.5 font-bold">{NOT_A_RECOMMENDATION}</p>
+            </div>
+          )}
           {!validPoint ? (
             <p className="rounded border border-line bg-surface px-4 py-6 text-sm text-muted">
               緯度・経度の値が正しくありません（日本国内の範囲で入力してください）。
@@ -171,6 +199,27 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           </ul>
         </section>
       )}
+
+      {/* ---- 並べ替え ---- */}
+      <section className="mt-10">
+        <h2 className="mb-3">並べ替えて探す</h2>
+        <p className="mb-3 text-sm text-muted">
+          公表データの値そのもので並べ替えた一覧です。複数項目を合成した総合ランキングは作成していません。
+          {NOT_A_RECOMMENDATION}
+        </p>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {RANKING_AXES.filter((a) => a.href !== "/").map((a) => (
+            <li key={a.href}>
+              <Link
+                href={a.href}
+                className="block rounded border border-line bg-surface px-3 py-2 text-sm hover:border-accent hover:text-accent"
+              >
+                {a.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <SourceNote acquiredOn={meta.acquired_on} />
     </main>
