@@ -44,7 +44,7 @@ export default function PlaceSearchForm({
   }
 
   return (
-    <form method="get" action="/" className="rounded border border-line-strong bg-surface p-4 sm:p-5">
+    <form method="get" action="/" className="card p-4 sm:p-5">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
         <label className="block text-xs">
           <span className="font-bold text-ink">住所・地名</span>
@@ -54,7 +54,7 @@ export default function PlaceSearchForm({
             onChange={(e) => { setQ(e.target.value); setLat(""); setLng(""); }}
             placeholder="例: 東京都世田谷区成城 / 札幌市中央区"
             autoComplete="street-address"
-            className="mt-1 w-full rounded border border-line-strong px-3 py-2 text-base sm:text-sm"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2.5 text-base sm:text-sm"
           />
         </label>
 
@@ -63,7 +63,7 @@ export default function PlaceSearchForm({
           <select
             name="radius"
             defaultValue={defaults.radius ?? "3"}
-            className="mt-1 w-full rounded border border-line-strong bg-surface px-3 py-2 text-base sm:text-sm"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2.5 text-base sm:text-sm"
           >
             {["1", "3", "5", "10", "20"].map((r) => (
               <option key={r} value={r}>{r}km以内</option>
@@ -76,7 +76,7 @@ export default function PlaceSearchForm({
           <select
             name="type"
             defaultValue={defaults.type ?? ""}
-            className="mt-1 w-full rounded border border-line-strong bg-surface px-3 py-2 text-base sm:text-sm"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2.5 text-base sm:text-sm"
           >
             <option value="">すべて</option>
             {types.map((t) => (
@@ -97,14 +97,14 @@ export default function PlaceSearchForm({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="submit"
-          className="rounded bg-accent px-6 py-2 text-sm font-bold text-white hover:bg-accent-strong"
+          className="btn-primary px-7 py-2.5 text-sm"
         >
           近い順に探す
         </button>
         <button
           type="button"
           onClick={locate}
-          className="rounded border border-line-strong px-3 py-2 text-xs hover:bg-tint"
+          className="rounded-full border border-line-strong px-4 py-2.5 text-xs hover:bg-tint"
         >
           現在地を使う
         </button>

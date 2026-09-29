@@ -27,14 +27,14 @@ export default function RankingFilter({
   const hasFilter = Boolean(pref || (showType && type));
 
   return (
-    <form method="get" action={action} className="mb-5 rounded border border-line bg-surface p-3">
+    <form method="get" action={action} className="mb-5 card p-3">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="block text-xs">
           <span className="text-muted">都道府県</span>
           <select
             name="pref"
             defaultValue={pref ?? ""}
-            className="mt-1 w-full rounded border border-line-strong bg-surface px-2 py-1.5 text-sm"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-sm"
           >
             <option value="">すべて</option>
             {PREF_ORDER.map((name) => (
@@ -51,7 +51,7 @@ export default function RankingFilter({
             <select
               name="type"
               defaultValue={type ?? ""}
-              className="mt-1 w-full rounded border border-line-strong bg-surface px-2 py-1.5 text-sm"
+              className="mt-1 w-full rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-sm"
             >
               <option value="">すべて</option>
               {types.map((t) => (
@@ -73,7 +73,7 @@ export default function RankingFilter({
           {hasFilter && (
             <Link
               href={action}
-              className="rounded border border-line-strong px-3 py-1.5 text-xs hover:bg-tint"
+              className="rounded-lg border border-line-strong px-3 py-1.5 text-xs hover:bg-tint"
             >
               条件を解除
             </Link>

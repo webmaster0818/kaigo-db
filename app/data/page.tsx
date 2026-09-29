@@ -79,7 +79,7 @@ export default async function DataPage() {
             <div className="hidden md:block">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b-2 border-ink text-left text-xs text-muted">
+                  <tr className="border-b border-line-strong text-left text-xs text-muted">
                     <th scope="col" className="py-2 pr-3 font-medium">項目</th>
                     <th scope="col" className="w-28 py-2 pr-3 text-right font-medium">記載あり</th>
                     <th scope="col" className="w-20 py-2 pr-3 text-right font-medium">充足率</th>
@@ -101,7 +101,7 @@ export default async function DataPage() {
             {/* スマホ: カード */}
             <ul className="space-y-2 md:hidden">
               {coverage.fields.map((f) => (
-                <li key={f.key} className="rounded border border-line bg-surface p-3 text-sm">
+                <li key={f.key} className="card p-3 text-sm">
                   <div className="flex items-baseline justify-between">
                     <span>{f.label}</span>
                     <span className="tabular-nums text-xs text-muted">
@@ -122,7 +122,7 @@ export default async function DataPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] border-collapse text-sm">
               <thead>
-                <tr className="border-b-2 border-ink text-left text-xs text-muted">
+                <tr className="border-b border-line-strong text-left text-xs text-muted">
                   <th scope="col" className="py-2 pr-3 font-medium">サービス種別</th>
                   <th scope="col" className="w-24 py-2 pr-3 text-right font-medium">件数</th>
                   <th scope="col" className="w-28 py-2 pr-3 text-right font-medium">定員あり</th>

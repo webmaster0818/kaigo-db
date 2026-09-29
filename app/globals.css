@@ -1,26 +1,34 @@
 @import "tailwindcss";
 
 /* ===== かいごDB デザイントークン =====
-   実用ツール寄り。白基調＋アクセント1色（濃紺）。
-   丸ゴシック・パステル・不要な影は使わない。数字と表の可読性を最優先。 */
+   子が親のために調べるサイト。明るく・やわらかく、でも数字は読みやすく。
+   白＋クリーム基調＋アクセント1色（あたたかいオレンジ）。補助色に若草。
+   表・数字の可読性は落とさない（tabular-nums と十分なコントラストを維持）。 */
 @theme {
-  --color-ink: #16181c;
-  --color-muted: #5c6470;
-  --color-muted-2: #8b929c;
+  --color-ink: #2c2620;
+  --color-muted: #6b6259;
+  --color-muted-2: #948a80;
 
-  --color-line: #e3e6ea;
-  --color-line-strong: #c7ccd3;
+  --color-line: #eee3d8;
+  --color-line-strong: #dccbba;
 
   --color-surface: #ffffff;
-  --color-paper: #f7f8f9;
-  --color-tint: #f4f6f9;
+  --color-paper: #fffaf4;
+  --color-tint: #fdf3ea;
 
-  --color-accent: #15509a;
-  --color-accent-strong: #0f3f7c;
-  --color-accent-weak: #eaf0f8;
+  /* アクセント: 白背景で本文リンクに使える濃さのオレンジ（コントラスト比 4.6:1） */
+  --color-accent: #c0551f;
+  --color-accent-strong: #9d4416;
+  --color-accent-weak: #fdeee3;
+
+  /* 補助: 落ち着いた若草。バッジや2番目の導線に */
+  --color-leaf: #4f7c5a;
+  --color-leaf-weak: #eaf3ec;
 
   --font-sans: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo,
     system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 14px;
 }
 
 html {
@@ -33,7 +41,7 @@ body {
   font-family: var(--font-sans);
   font-feature-settings: "palt";
   -webkit-font-smoothing: antialiased;
-  line-height: 1.7;
+  line-height: 1.8;
 }
 
 /* 数字は等幅で縦に揃える（定員・件数・距離） */
@@ -50,19 +58,78 @@ a {
   outline-offset: 2px;
 }
 
-/* 見出し。装飾せず階層だけで区切る */
+/* 見出し。装飾は最小限、階層だけで区切る */
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.45;
   letter-spacing: -0.01em;
 }
 h2 {
-  font-size: 1.125rem;
+  font-size: 1.2rem;
   font-weight: 700;
   line-height: 1.5;
 }
 h3 {
   font-size: 0.95rem;
   font-weight: 700;
+}
+
+/* ---- 共通パーツ ---------------------------------------------------------- */
+
+/* カード。角丸＋ごく薄い影で「やわらかさ」を出す。影は濃くしない */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 2px rgb(44 38 32 / 4%);
+}
+.card-link {
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.card-link:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 4px 12px rgb(192 85 31 / 10%);
+  transform: translateY(-1px);
+}
+
+/* セクション見出しの前に置く小さなラベル */
+.eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: var(--color-accent-weak);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* 主CTA */
+.btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: background-color 0.15s;
+}
+.btn-primary:hover {
+  background: var(--color-accent-strong);
+}
+
+/* 注記ブロック（出典・並び順の根拠など、読み飛ばされては困らない注意書き） */
+.note {
+  background: var(--color-tint);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-link,
+  .btn-primary {
+    transition: none;
+  }
+  .card-link:hover {
+    transform: none;
+  }
 }

@@ -84,7 +84,7 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
       <RankingFilter action={PATH} types={types} pref={p.prefSlug} type={p.typeSlug} />
 
       {p.unknownFilter ? (
-        <p className="rounded border border-line bg-surface px-4 py-6 text-sm text-muted">
+        <p className="card px-4 py-6 text-sm text-muted">
           指定された条件が見つかりませんでした。上の絞り込みから選び直してください。
         </p>
       ) : stats.with_capacity === 0 ? (
@@ -115,7 +115,7 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
           <div className="hidden md:block">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b-2 border-ink text-left text-xs text-muted">
+                <tr className="border-b border-line-strong text-left text-xs text-muted">
                   <th scope="col" className="w-12 py-2 pr-3 text-right font-medium">順位</th>
                   <th scope="col" className="py-2 pr-3 font-medium">事業所名</th>
                   <th scope="col" className="w-20 py-2 pr-3 text-right font-medium">定員</th>
@@ -166,7 +166,7 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
           {/* ---- スマホ: カード ---- */}
           <ul className="space-y-2 md:hidden">
             {rows.map((f, i) => (
-              <li key={f.id} className="rounded border border-line bg-surface p-3">
+              <li key={f.id} className="card p-3">
                 <div className="flex items-baseline gap-2">
                   <span className="tabular-nums text-xs text-muted">{i + 1}</span>
                   <Link href={`/facility/${seg(f.id)}/`} className="font-medium underline-offset-2 hover:underline">

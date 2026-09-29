@@ -90,7 +90,7 @@ export default async function HojinScaleRanking({ searchParams }: { searchParams
       <RankingFilter action={PATH} types={types} pref={p.prefSlug} type={p.typeSlug} />
 
       {p.unknownFilter ? (
-        <p className="rounded border border-line bg-surface px-4 py-6 text-sm text-muted">
+        <p className="card px-4 py-6 text-sm text-muted">
           指定された条件が見つかりませんでした。上の絞り込みから選び直してください。
         </p>
       ) : rows.length === 0 ? (
@@ -106,7 +106,7 @@ export default async function HojinScaleRanking({ searchParams }: { searchParams
           <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
-                <tr className="border-b-2 border-ink text-left text-xs text-muted">
+                <tr className="border-b border-line-strong text-left text-xs text-muted">
                   <th scope="col" className="w-12 py-2 pr-3 text-right font-medium">順位</th>
                   <th scope="col" className="py-2 pr-3 font-medium">法人名</th>
                   <th scope="col" className="w-28 py-2 pr-3 text-right font-medium">

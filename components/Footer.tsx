@@ -9,6 +9,8 @@ export default function Footer() {
           <li><Link href="/" className="hover:text-accent hover:underline">トップ</Link></li>
           <li><Link href="/type/" className="hover:text-accent hover:underline">サービス種別一覧</Link></li>
           <li><Link href="/area/" className="hover:text-accent hover:underline">都道府県一覧</Link></li>
+          <li><Link href="/hojin/" className="hover:text-accent hover:underline">運営法人一覧</Link></li>
+          <li><Link href="/ranking/" className="hover:text-accent hover:underline">並べ替えて探す</Link></li>
           <li><Link href="/data/" className="hover:text-accent hover:underline">データについて（充足率）</Link></li>
         </ul>
         <p className="mt-5 leading-relaxed">

@@ -113,7 +113,7 @@ export default async function CityPage({
                 <li key={t.slug}>
                   <Link
                     href={`/type/${seg(t.slug)}/`}
-                    className="inline-flex items-baseline gap-1 rounded border border-line bg-surface px-2 py-1 hover:border-accent hover:text-accent"
+                    className="inline-flex items-baseline gap-1 card px-2 py-1 hover:border-accent hover:text-accent"
                   >
                     {t.name}<span className="tabular-nums text-muted">{t.n}</span>
                   </Link>
@@ -129,14 +129,14 @@ export default async function CityPage({
               <select
                 name="sort"
                 defaultValue={sort}
-                className="ml-2 rounded border border-line-strong bg-surface px-2 py-1 text-sm"
+                className="ml-2 rounded-lg border border-line-strong bg-surface px-2 py-1 text-sm"
               >
                 <option value="default">種別順（住まい→在宅）</option>
                 <option value="capacity">定員が多い順</option>
                 <option value="name">事業所名順</option>
               </select>
             </label>
-            <button type="submit" className="rounded border border-line-strong px-3 py-1 text-xs hover:bg-tint">
+            <button type="submit" className="rounded-lg border border-line-strong px-3 py-1 text-xs hover:bg-tint">
               並べ替える
             </button>
             <span className="text-xs text-muted">

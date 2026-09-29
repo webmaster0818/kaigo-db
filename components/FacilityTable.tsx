@@ -30,7 +30,7 @@ function cityHref(f: Facility): string | null {
 export default function FacilityTable({ rows, showDistance, hideType, hideCity, hideCorp }: Props) {
   if (rows.length === 0) {
     return (
-      <p className="rounded border border-line bg-surface px-4 py-8 text-center text-sm text-muted">
+      <p className="card px-4 py-8 text-center text-sm text-muted">
         該当する施設はありません。
       </p>
     );
@@ -42,7 +42,7 @@ export default function FacilityTable({ rows, showDistance, hideType, hideCity, 
       <div className="hidden md:block">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b-2 border-ink text-left text-xs text-muted">
+            <tr className="border-b border-line-strong text-left text-xs text-muted">
               {showDistance && <th scope="col" className="w-20 py-2 pr-3 font-medium">距離</th>}
               <th scope="col" className="py-2 pr-3 font-medium">事業所名</th>
               {!hideType && <th scope="col" className="w-48 py-2 pr-3 font-medium">種別</th>}
@@ -108,7 +108,7 @@ export default function FacilityTable({ rows, showDistance, hideType, hideCity, 
       {/* ---- スマホ: カード ---- */}
       <ul className="space-y-2 md:hidden">
         {rows.map((f) => (
-          <li key={f.id} className="rounded border border-line bg-surface p-3">
+          <li key={f.id} className="card p-3">
             <Link href={`/facility/${seg(f.id)}/`} className="font-medium text-ink underline-offset-2 hover:underline">
               {f.name}
             </Link>

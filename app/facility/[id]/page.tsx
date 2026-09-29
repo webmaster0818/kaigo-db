@@ -179,7 +179,7 @@ export default async function FacilityPage({ params }: { params: Params }) {
       </dl>
 
       {!indexable && (
-        <p className="mb-6 rounded border border-line bg-tint px-3 py-2 text-xs text-muted">
+        <p className="mb-6 note px-3 py-2 text-xs text-muted">
           この事業所は公表データに定員・公式URLの記載がないため、掲載項目が限られています
           （当サイトの方針により検索エンジンには登録していません）。
         </p>
