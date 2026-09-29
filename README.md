@@ -1,10 +1,13 @@
 # かいごDB（kaigo-db）
 
 厚生労働省「介護サービス情報公表システム」オープンデータ（CC BY 4.0）を、
-現在地からの距離・市区町村・サービス種別・運営法人で引ける形にした介護施設データベース。
+住所・地名からの距離、運営法人（法人番号）、市区町村、サービス種別で引ける形にした介護施設データベース。
 
-**現状：データ本体（CSV）未着。CSVが届いたら `npm run import` を流すだけで公開できる状態まで作ってある。**
-架空データ・サンプルDBは作っていない（`data/sample.sqlite` は存在しない）。データ0件でも全ページが落ちずに「データ準備中」を出す。
+**現状：2026-09-29 取得の入居系4種別 31,441件を取り込み済み。**
+（特養8,543 / 老健4,121 / グループホーム14,310 / 有料老人ホーム4,467）
+架空データ・サンプルDBは作っていない。データ0件でも全ページが落ちずに「データ準備中」を出す。
+
+本番ドメイン: `kaigo-database.com`（`lib/site.ts`）。
 
 ---
 
@@ -31,13 +34,20 @@ personal-gym-navi と同じ構成を踏襲。
 5. **複数項目を重み付けして合成した「総合ランキング」は作らない。**重みの根拠を説明できないため。
    代わりに、公表データの値そのもの1本で並べ替えた一覧（`/ranking/*`）を置く。
    各ページに「何の値で並べているか」と「この並び順は当サイトによる評価・推薦ではありません」を必ず書く（`lib/ranking.ts` に文言を集約）。
+6. **法人の名寄せキーは法人名ではなく法人番号（13桁）。**表記ゆれ（全角スペースの有無など）で
+   同一法人が複数ページに割れる／同名の別法人が混ざる、どちらも防ぐため。
+   法人番号が無い事業所（実測1.7%＝538件）は法人ページを作らず、施設ページに出典の法人名だけを出す。
+   法人ページの表示名は、同一法人番号の中で最も多く出現した表記を採用する。
+7. **電話相談の窓口は作らない。**相談員が居らず、助言できる体制を持たないため。
+8. **地名→座標の変換に外部APIを使わない。**掲載施設の緯度・経度から `place` テーブル（地名辞書）を
+   import 時に作り、それを引く。掲載施設が無い地域の地名は「見つかりません」と正直に返す。
 
 ---
 
 ## ディレクトリ
 
 ```
-schema.sql                     D1/SQLite スキーマ
+schema.sql                     D1/SQLite スキーマ（facility / corporation / area / place / meta）
 scripts/import.ts              CSV → SQLite + D1投入用SQL
 lib/db.ts                      D1 / better-sqlite3 抽象化（データ無しでも落ちない）
 lib/geo.ts                     Haversine + バウンディングボックス（D1に三角関数が無い前提）
@@ -46,15 +56,15 @@ lib/ranking.ts                 並べ替えの軸の定義・共通文言・ク�
 lib/serviceTypes.ts            サービス種別 → スラッグ（未知種別は svc-<hash> を自動採番）
 lib/slug.ts                    都道府県・市区町村・法人のスラッグ生成
 lib/site.ts                    サイト定数・出典情報・「記載なし」
-components/                    SiteHeader / Footer / Breadcrumb / FacilityTable / SourceNote / EmptyState / GeoSearchForm
-app/page.tsx                   / … 緯度経度＋距離での検索
+components/                    SiteHeader / Footer / Breadcrumb / FacilityTable / SourceNote / EmptyState / RankingNote / RankingFilter / PlaceSearchForm
+app/page.tsx                   / … 住所・地名（または現在地）＋距離での検索 ＋ 運営法人・種別・エリア・並べ替えへの導線
 app/area/page.tsx              /area/ … 都道府県一覧
 app/area/[pref]/page.tsx       /area/tokyo/ … 市区町村一覧
 app/area/[pref]/[city]/page.tsx /area/tokyo/世田谷区/ … 施設一覧
-app/facility/[id]/page.tsx     /facility/1370100001/ … 施設詳細
+app/facility/[id]/page.tsx     /facility/0170100754-group-home/ … 施設詳細（ID＝事業所番号-種別スラッグ）
 app/type/page.tsx              /type/ … サービス種別一覧
 app/type/[type]/page.tsx       /type/tokuyo/ … 種別ごとの一覧
-app/hojin/[slug]/page.tsx      /hojin/<法人スラッグ>/ … 法人ごとの事業所
+app/hojin/[slug]/page.tsx      /hojin/c3430005000635/ … 法人ごとの事業所（スラッグ＝c+法人番号13桁）
 app/ranking/page.tsx           /ranking/ … 並べ替えの軸の一覧（根拠を1行で説明）
 app/ranking/capacity/page.tsx  /ranking/capacity/ … 定員が多い順（定員の記載がある施設のみ）
 app/ranking/hojin-scale/page.tsx /ranking/hojin-scale/ … 同一法人の運営施設数が多い順
@@ -72,25 +82,27 @@ app/sitemap.ts / app/robots.ts index対象のみを sitemap に出す
 ```bash
 cd /Users/jiro.hasegawa/.openclaw/workspace/projects/kaigo-db
 npm install
-mkdir -p raw/20260901        # CSV 35本をここに置く（raw/ は .gitignore 済み）
+mkdir -p raw/20260929        # CSV をここに置く（raw/ は .gitignore 済み）
 ```
 
 ### 1. まず列名を確認（DBは作らない）
 
 ```bash
-npm run import -- ./raw/20260901 --acquired 2026-09-01 --dry-run
+npm run import -- ./raw/20260929 --acquired 2026-09-29 --dry-run
 ```
 
-- 「未マッピングの列」「未知のサービス種別」「未知の都道府県表記」が警告で出る。
-- 必要に応じて `scripts/import.ts` の `COLUMN_MAP` と `lib/serviceTypes.ts` に追記する。
+- 「未マッピングの列」「未知のサービス種別」「未知の都道府県表記」が **3つとも0件** になることを確認してから本実行する。
+- 未マッピングの列が出たら、`scripts/import.ts` の `COLUMN_MAP`（取り込む）か `IGNORED_COLUMNS`（理由を書いて捨てる）のどちらかに必ず追記する。
+- 未知のサービス種別が出たら `lib/serviceTypes.ts` に追記する。
 - CSVの先頭に説明行がある場合は `--header-row 2` のように指定する。
 
 ### 2. 取り込み（SQLite + D1投入用SQL を生成）
 
 ```bash
-npm run import -- ./raw/20260901 --acquired 2026-09-01
+npm run import -- ./raw/20260929 --acquired 2026-09-29
 # → data/kaigo.sqlite（開発サーバ用）
-# → data/d1/000_schema.sql, 001_facility.sql … （D1投入用。2000行ずつ分割）
+# → data/d1/000_schema.sql, 001_facility.sql …, *_corporation.sql, *_place.sql, *_area_meta.sql
+#   （D1投入用。2000行ずつ分割。2026-09-29分で57ファイル・約37MB）
 ```
 
 `--acquired`（データ取得日）は必須。CC BY 表示の「取得日」に使う。
@@ -133,11 +145,15 @@ npx wrangler deploy
 
 ## 未確定・要確認事項
 
-- **列名**：実CSV未着のため `COLUMN_MAP` は公表システムの一般的な列名からの推定。初回は必ず `--dry-run` で確認する。
-- **市区町村・法人のスラッグ**：ローマ字辞書が無いため暫定で日本語をそのままスラッグにしている（例 `/area/tokyo/世田谷区/`）。変えるなら `lib/slug.ts` の `citySlug()` / `corpSlugBase()` を差し替えて再 import。
-- **本番ドメイン**：未定。`lib/site.ts` の `SITE_URL`（既定 `https://kaigo-db.jp`）を決定後に書き換えるか、`NEXT_PUBLIC_SITE_URL` を設定する。canonical・JSON-LD・sitemap がこの値を使う。
-- **住所・駅名での検索**：ジオコーディングAPI未接続。現状は緯度経度のみ。
+- **駅名での検索**：駅の座標データを持っていない。ライセンスがはっきりした駅データ（国土数値情報 N02 など）を
+  取り込むまでは、「〇〇駅」と入力されたら「駅」を外し、同名の地名の代表点で検索する（画面にその旨を明示している）。
+- **市区町村のスラッグ**：ローマ字辞書が無いため日本語をそのままスラッグにしている（例 `/area/tokyo/世田谷区/`）。
+  変えるなら `lib/slug.ts` の `citySlug()` を差し替えて再 import。法人スラッグは法人番号ベース（`c<法人番号>`）で確定済み。
+- **出典データの緯度経度のずれ**：自分の市区町村の代表点から20km以上離れた行が671件（2.1%）ある。
+  広い自治体もあるが、明らかな誤登録（横浜市の施設が新宿の座標）も混ざっている。距離検索の精度に直接効くので、
+  出典が更新されたら再確認する。値の補正は行っていない（推測で書き換えない方針のため）。
 - **`wrangler.jsonc` の `database_id`**：`PLACEHOLDER_RUN_WRANGLER_D1_CREATE` のまま。手順4で差し替える。
+- **D1への投入**：未実施（本番D1が未作成のため）。手順4のとおり `data/d1/*.sql` を順に流す。
 
 ---
 

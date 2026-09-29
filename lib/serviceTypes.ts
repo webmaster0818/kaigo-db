@@ -19,10 +19,10 @@ export interface ServiceTypeDef {
 export const SERVICE_TYPES: ServiceTypeDef[] = [
   // ---- 入居系4種（今回の中心。計31,324件の想定） ----
   {
-    name: "有料老人ホーム",
+    name: "有料老人ホーム（特定施設入居者生活介護）",
     slug: "yuryo-rojin-home",
     residential: true,
-    aliases: ["有料老人ホーム", "特定施設入居者生活介護"],
+    aliases: ["特定施設入居者生活介護", "有料老人ホーム"],
   },
   {
     name: "認知症対応型共同生活介護（グループホーム）",

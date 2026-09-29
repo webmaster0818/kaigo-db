@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 
 const NAV = [
-  { href: "/", label: "現在地から探す" },
+  { href: "/", label: "住所から探す" },
   { href: "/type/", label: "サービス種別" },
   { href: "/area/", label: "エリア" },
   { href: "/ranking/", label: "並べ替えて探す" },

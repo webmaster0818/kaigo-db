@@ -8,13 +8,17 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { bboxWhere, withinRadius, type LatLng } from "./geo";
+import { placeKey } from "./slug";
 
 // ---------------------------------------------------------------------------
 // 型
 // ---------------------------------------------------------------------------
 
 export interface Facility {
+  /** 「事業所番号-サービス種別スラッグ」の複合ID（schema.sql 参照） */
   id: string;
+  /** 出典の事業所番号(10桁)。一意ではない */
+  jigyosho_no: string;
   name: string;
   service_type: string;
   service_type_slug: string;
@@ -28,6 +32,8 @@ export interface Facility {
   lat: number | null;
   lng: number | null;
   tel: string | null;
+  /** 法人番号(13桁)。無い場合は法人ページを作らない */
+  corporate_number: string | null;
   corporation_name: string | null;
   corporation_slug: string | null;
   capacity: number | null;
@@ -38,10 +44,14 @@ export interface Facility {
 }
 
 export interface Corporation {
+  /** 'c' + 法人番号13桁 */
   slug: string;
+  corporate_number: string;
   name: string;
   facility_count: number;
   pref_count: number;
+  /** 出典に現れた表記の異なり数（1より大きい＝表記ゆれを名寄せした） */
+  name_variants: number;
 }
 
 export interface AreaRow {
@@ -63,6 +73,37 @@ export interface TypeCount {
   service_type_slug: string;
   is_residential: number;
   facility_count: number;
+}
+
+/** place テーブルの1行（住所・地名 → 代表点） */
+export interface PlaceRow {
+  key: string;
+  name: string;
+  kind: string;
+  pref_slug: string | null;
+  city_slug: string | null;
+  lat: number;
+  lng: number;
+  facility_count: number;
+}
+
+/** どうやって入力文字列を地点に結び付けたか（画面に根拠として出す） */
+export type PlaceMatch = "exact" | "prefix" | "startsWith" | "contains" | "station";
+
+export interface PlaceHit extends PlaceRow {
+  match: PlaceMatch;
+}
+
+/** トップページに出す実測値 */
+export interface SiteStats {
+  facilities: number;
+  corporations: number;
+  cities: number;
+  /** 掲載が3件以上ある市区町村 */
+  cities3: number;
+  prefs: number;
+  withCapacity: number;
+  withGeo: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +195,16 @@ async function safeGet<T>(sql: string, params: unknown[] = []): Promise<T | unde
 // ---------------------------------------------------------------------------
 
 const FACILITY_COLS =
-  "id, name, service_type, service_type_slug, is_residential, postal_code, prefecture, pref_slug, city, city_slug, address, lat, lng, tel, corporation_name, corporation_slug, capacity, open_days, official_url, acquired_on, is_indexable";
+  "id, jigyosho_no, name, service_type, service_type_slug, is_residential, postal_code, prefecture, pref_slug, city, city_slug, address, lat, lng, tel, corporate_number, corporation_name, corporation_slug, capacity, open_days, official_url, acquired_on, is_indexable";
+
+const CORP_COLS = "slug, corporate_number, name, facility_count, pref_count, name_variants";
+
+const PLACE_COLS = "key, name, kind, pref_slug, city_slug, lat, lng, facility_count";
+
+/** LIKE のワイルドカードを打ち消す（利用者の入力に % や _ が入っていても素直に扱う） */
+function likeEscape(s: string): string {
+  return s.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
 
 /**
  * /ranking/* の絞り込みを WHERE 句の続き（" AND ..."）に変換する。
@@ -296,7 +346,7 @@ export const queries = {
 
   // ---- 法人 ----
   async corporationBySlug(slug: string): Promise<Corporation | undefined> {
-    return safeGet<Corporation>("SELECT slug, name, facility_count, pref_count FROM corporation WHERE slug = ?", [slug]);
+    return safeGet<Corporation>(`SELECT ${CORP_COLS} FROM corporation WHERE slug = ?`, [slug]);
   },
 
   async facilitiesByCorp(slug: string, limit = 300): Promise<Facility[]> {
@@ -309,7 +359,7 @@ export const queries = {
 
   async topCorporations(limit = 20): Promise<Corporation[]> {
     return safeAll<Corporation>(
-      "SELECT slug, name, facility_count, pref_count FROM corporation ORDER BY facility_count DESC, name LIMIT ?",
+      `SELECT ${CORP_COLS} FROM corporation ORDER BY facility_count DESC, name LIMIT ?`,
       [limit],
     );
   },
@@ -355,7 +405,7 @@ export const queries = {
   async corporationsByScale(f: RankingFilter = {}, limit = 100, offset = 0): Promise<Corporation[]> {
     if (!f.prefSlug && !f.typeSlug) {
       return safeAll<Corporation>(
-        `SELECT slug, name, facility_count, pref_count FROM corporation
+        `SELECT ${CORP_COLS} FROM corporation
          WHERE facility_count > 0
          ORDER BY facility_count DESC, pref_count DESC, name ASC
          LIMIT ? OFFSET ?`,
@@ -364,11 +414,11 @@ export const queries = {
     }
     const w = rankFilter(f);
     return safeAll<Corporation>(
-      `SELECT corporation_slug AS slug, corporation_name AS name,
-              COUNT(*) AS facility_count, COUNT(DISTINCT pref_slug) AS pref_count
+      `SELECT corporation_slug AS slug, corporate_number, corporation_name AS name,
+              COUNT(*) AS facility_count, COUNT(DISTINCT pref_slug) AS pref_count, 1 AS name_variants
        FROM facility
        WHERE corporation_slug IS NOT NULL AND corporation_slug <> ''${w.sql}
-       GROUP BY corporation_slug, corporation_name
+       GROUP BY corporation_slug, corporate_number, corporation_name
        ORDER BY facility_count DESC, pref_count DESC, name ASC
        LIMIT ? OFFSET ?`,
       [...w.params, limit, offset],
@@ -465,6 +515,98 @@ export const queries = {
     return withinRadius(rows, center, radiusKm).slice(0, opts.limit ?? 50);
   },
 
+  // ---- 住所・地名検索（place テーブル） ----
+  //
+  // 外部のジオコーディングAPIは使わない。import 時に掲載施設の緯度経度から作った
+  // 「地名 → 代表点」の辞書(place)を引く。したがって出せるのは掲載データに出てくる
+  // 地名だけで、それ以外は「見つかりません」と正直に返す（座標をでっち上げない）。
+
+  /**
+   * 入力文字列から地点を1つ決める。
+   *   1) 入力の先頭に一致する最も長いキー（「東京都世田谷区成城6-5-34」→「東京都世田谷区成城」）
+   *   2) 入力で始まるキーのうち掲載件数が最も多いもの（「世田谷区成」→「世田谷区成城」）
+   *   3) 入力を含むキーのうち掲載件数が最も多いもの
+   *   4) 末尾が「駅」なら外して1〜3を再試行（駅の座標そのものは持っていないので、
+   *      同名の地名の代表点を返し、そのことを画面に明示する）
+   */
+  async resolvePlace(input: string): Promise<PlaceHit | undefined> {
+    const k = placeKey(input);
+    if (k.length < 2) return undefined;
+
+    // 1) 入力の先頭に一致する最長キー
+    const prefixes: string[] = [];
+    for (let len = Math.min(k.length, 40); len >= 2; len--) prefixes.push(k.slice(0, len));
+    const byPrefix = await safeGet<PlaceRow>(
+      `SELECT ${PLACE_COLS} FROM place WHERE key IN (${prefixes.map(() => "?").join(",")})
+       ORDER BY LENGTH(key) DESC, facility_count DESC LIMIT 1`,
+      prefixes,
+    );
+    if (byPrefix) return { ...byPrefix, match: byPrefix.key === k ? "exact" : "prefix" };
+
+    // 2) 入力で始まるキー
+    const esc = likeEscape(k);
+    const startsWith = await safeGet<PlaceRow>(
+      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
+       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
+      [`${esc}%`],
+    );
+    if (startsWith) return { ...startsWith, match: "startsWith" };
+
+    // 3) 入力を含むキー
+    const contains = await safeGet<PlaceRow>(
+      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
+       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
+      [`%${esc}%`],
+    );
+    if (contains) return { ...contains, match: "contains" };
+
+    // 4) 「〇〇駅」→「〇〇」で引き直す
+    const withoutStation = k.replace(/駅(前|北口|南口|東口|西口)?$/, "");
+    if (withoutStation !== k && withoutStation.length >= 2) {
+      const again = await queries.resolvePlace(withoutStation);
+      if (again) return { ...again, match: "station" };
+    }
+    return undefined;
+  },
+
+  /** 解決できなかったときに出す候補（入力を含む地名） */
+  async placeSuggestions(input: string, limit = 8): Promise<PlaceRow[]> {
+    const k = placeKey(input);
+    if (k.length < 2) return [];
+    return safeAll<PlaceRow>(
+      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
+       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT ?`,
+      [`%${likeEscape(k)}%`, limit],
+    );
+  },
+
+  // ---- トップページに出す実測値 ----
+  /**
+   * すべて取り込み済みのデータから数える（推測値・固定値は置かない）。
+   * meta にも import 時の値を入れてあるが、こちらはDBを直接数えるので常に現物と一致する。
+   */
+  async siteStats(): Promise<SiteStats> {
+    const r = await safeGet<Record<string, number>>(
+      `SELECT
+         (SELECT COUNT(*) FROM facility) AS facilities,
+         (SELECT COUNT(*) FROM corporation) AS corporations,
+         (SELECT COUNT(*) FROM area) AS cities,
+         (SELECT COUNT(*) FROM area WHERE facility_count >= 3) AS cities3,
+         (SELECT COUNT(DISTINCT pref_slug) FROM area WHERE pref_slug <> '') AS prefs,
+         (SELECT COUNT(*) FROM facility WHERE capacity IS NOT NULL AND capacity > 0) AS with_capacity,
+         (SELECT COUNT(*) FROM facility WHERE lat IS NOT NULL AND lng IS NOT NULL) AS with_geo`,
+    );
+    return {
+      facilities: Number(r?.facilities ?? 0),
+      corporations: Number(r?.corporations ?? 0),
+      cities: Number(r?.cities ?? 0),
+      cities3: Number(r?.cities3 ?? 0),
+      prefs: Number(r?.prefs ?? 0),
+      withCapacity: Number(r?.with_capacity ?? 0),
+      withGeo: Number(r?.with_geo ?? 0),
+    };
+  },
+
   // ---- sitemap 用 ----
   /** index 対象の施設IDのみ（noindexページはsitemapに載せない） */
   async indexableFacilityIds(limit = 45000): Promise<Array<{ id: string }>> {
@@ -493,10 +635,10 @@ export const queries = {
          SUM(CASE WHEN address IS NOT NULL AND address <> '' THEN 1 ELSE 0 END) AS f_address,
          SUM(CASE WHEN prefecture IS NOT NULL AND prefecture <> '' THEN 1 ELSE 0 END) AS f_pref,
          SUM(CASE WHEN city IS NOT NULL AND city <> '' THEN 1 ELSE 0 END) AS f_city,
-         SUM(CASE WHEN postal_code IS NOT NULL AND postal_code <> '' THEN 1 ELSE 0 END) AS f_postal,
          SUM(CASE WHEN lat IS NOT NULL AND lng IS NOT NULL THEN 1 ELSE 0 END) AS f_latlng,
          SUM(CASE WHEN tel IS NOT NULL AND tel <> '' THEN 1 ELSE 0 END) AS f_tel,
          SUM(CASE WHEN corporation_name IS NOT NULL AND corporation_name <> '' THEN 1 ELSE 0 END) AS f_corp,
+         SUM(CASE WHEN corporate_number IS NOT NULL AND corporate_number <> '' THEN 1 ELSE 0 END) AS f_corpno,
          SUM(CASE WHEN capacity IS NOT NULL THEN 1 ELSE 0 END) AS f_capacity,
          SUM(CASE WHEN open_days IS NOT NULL AND open_days <> '' THEN 1 ELSE 0 END) AS f_days,
          SUM(CASE WHEN official_url IS NOT NULL AND official_url <> '' THEN 1 ELSE 0 END) AS f_url,
@@ -509,11 +651,11 @@ export const queries = {
       { key: "address", label: "住所", filled: Number(row?.f_address ?? 0) },
       { key: "pref", label: "都道府県", filled: Number(row?.f_pref ?? 0) },
       { key: "city", label: "市区町村", filled: Number(row?.f_city ?? 0) },
-      { key: "postal", label: "郵便番号", filled: Number(row?.f_postal ?? 0) },
       { key: "latlng", label: "緯度・経度", filled: Number(row?.f_latlng ?? 0) },
       { key: "tel", label: "電話番号", filled: Number(row?.f_tel ?? 0) },
       { key: "corp", label: "法人名", filled: Number(row?.f_corp ?? 0) },
-      { key: "capacity", label: "定員", filled: Number(row?.f_capacity ?? 0) },
+      { key: "corpno", label: "法人番号（法人ページの名寄せキー）", filled: Number(row?.f_corpno ?? 0) },
+      { key: "capacity", label: "定員（1人以上の記載）", filled: Number(row?.f_capacity ?? 0) },
       { key: "days", label: "利用可能曜日", filled: Number(row?.f_days ?? 0) },
       { key: "url", label: "公式URL", filled: Number(row?.f_url ?? 0) },
       { key: "indexable", label: "（参考）index対象＝公式URLか定員あり", filled: Number(row?.f_indexable ?? 0) },

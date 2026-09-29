@@ -38,6 +38,8 @@ export default async function HojinPage({ params }: { params: Params }) {
     "@type": "Organization",
     name: c.name,
     url: abs(`/hojin/${seg(slug)}/`),
+    // 国税庁の法人番号。同名の別法人と取り違えられないよう識別子として出す。
+    identifier: { "@type": "PropertyValue", name: "法人番号", value: c.corporate_number },
   };
 
   const types = new Map<string, number>();
@@ -62,6 +64,10 @@ export default async function HojinPage({ params }: { params: Params }) {
           <dt className="text-xs text-muted">サービス種別</dt>
           <dd className="tabular-nums text-lg font-bold">{types.size.toLocaleString()}</dd>
         </div>
+        <div>
+          <dt className="text-xs text-muted">法人番号</dt>
+          <dd className="tabular-nums text-lg font-bold">{c.corporate_number}</dd>
+        </div>
       </dl>
 
       <FacilityTable rows={rows} hideCorp />
@@ -72,8 +78,16 @@ export default async function HojinPage({ params }: { params: Params }) {
         </p>
       )}
 
-      <p className="mt-4 text-xs text-muted">
-        法人名は出典データの表記をそのまま使用しています。同名の別法人が存在する場合、当サイトでは別ページとして扱います。
+      <p className="mt-4 text-xs leading-relaxed text-muted">
+        このページは法人名ではなく<strong>法人番号（{c.corporate_number}）</strong>で事業所をまとめています。
+        同名の別法人は別のページになり、表記が揺れている同一法人は1ページにまとまります。
+        {c.name_variants > 1 && (
+          <>
+            {" "}出典データではこの法人の名称が{c.name_variants}通りの表記で登録されていたため、
+            最も多く使われていた表記を見出しに採用しています。
+          </>
+        )}
+        {" "}法人番号の記載がない事業所（掲載全体の約1.7%）は、どの法人ページにも含まれません。
       </p>
 
       <SourceNote acquiredOn={meta.acquired_on} />

@@ -36,7 +36,7 @@ function facilityJsonLd(f: Facility) {
     name: f.name,
     url: abs(`/facility/${seg(f.id)}/`),
     additionalType: f.service_type,
-    identifier: f.id,
+    identifier: f.jigyosho_no,
   };
   if (f.address || f.prefecture || f.city || f.postal_code) {
     node.address = {
@@ -108,28 +108,40 @@ export default async function FacilityPage({ params }: { params: Params }) {
             {f.service_type}
           </Link>
         </Row>
+        {/* address は import 時に都道府県・市区町村まで含めた1本の文字列に揃えてある */}
         <Row label="所在地">
-          {f.address || f.prefecture ? (
+          {f.address ? (
             <>
               {f.postal_code ? `〒${f.postal_code} ` : ""}
-              {[f.prefecture, f.city].filter(Boolean).join("")}
-              {f.address ?? ""}
+              {f.address}
             </>
           ) : (
-            noData
+            [f.prefecture, f.city].filter(Boolean).join("") || noData
           )}
         </Row>
         <Row label="電話番号">{f.tel ? <a href={`tel:${f.tel.replace(/[^0-9+]/g, "")}`} className="text-accent hover:underline">{f.tel}</a> : noData}</Row>
         <Row label="定員">{f.capacity != null ? <span className="tabular-nums">{f.capacity}人</span> : noData}</Row>
         <Row label="利用可能曜日">{orNoData(f.open_days) === NO_DATA ? noData : f.open_days}</Row>
         <Row label="運営法人">
-          {f.corporation_name && f.corporation_slug ? (
-            <Link href={`/hojin/${seg(f.corporation_slug)}/`} className="text-accent hover:underline">
-              {f.corporation_name}
-            </Link>
+          {f.corporation_name ? (
+            f.corporation_slug ? (
+              <Link href={`/hojin/${seg(f.corporation_slug)}/`} className="text-accent hover:underline">
+                {f.corporation_name}
+              </Link>
+            ) : (
+              // 法人番号が無い事業所は法人ページを作らない（別法人を同一視する事故を避けるため）。
+              // 法人名は出典の表記をそのまま出す。
+              <>
+                {f.corporation_name}
+                <span className="ml-2 text-[11px] text-muted-2">法人番号の記載がないため法人ページはありません</span>
+              </>
+            )
           ) : (
             noData
           )}
+        </Row>
+        <Row label="法人番号">
+          {f.corporate_number ? <span className="tabular-nums">{f.corporate_number}</span> : noData}
         </Row>
         <Row label="公式サイト">
           {f.official_url ? (
@@ -153,7 +165,7 @@ export default async function FacilityPage({ params }: { params: Params }) {
                 地図で見る
               </a>
               <Link
-                href={`/?lat=${f.lat}&lng=${f.lng}&radius=3`}
+                href={`/?lat=${f.lat}&lng=${f.lng}&radius=3&sort=distance`}
                 className="ml-3 text-xs text-accent hover:underline"
               >
                 この周辺3kmを検索
@@ -163,7 +175,7 @@ export default async function FacilityPage({ params }: { params: Params }) {
             noData
           )}
         </Row>
-        <Row label="事業所番号">{orNoData(f.id) === NO_DATA ? noData : <span className="tabular-nums">{f.id}</span>}</Row>
+        <Row label="事業所番号">{orNoData(f.jigyosho_no) === NO_DATA ? noData : <span className="tabular-nums">{f.jigyosho_no}</span>}</Row>
       </dl>
 
       {!indexable && (

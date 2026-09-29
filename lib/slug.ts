@@ -88,43 +88,54 @@ export function citySlug(name: string | null | undefined): string {
   return name.trim().replace(/\s+/g, "").replace(/[/?#%&]/g, "");
 }
 
-const CORP_PREFIXES = [
-  "株式会社",
-  "有限会社",
-  "合同会社",
-  "合資会社",
-  "合名会社",
-  "医療法人社団",
-  "医療法人財団",
-  "医療法人",
-  "社会福祉法人",
-  "公益財団法人",
-  "公益社団法人",
-  "一般財団法人",
-  "一般社団法人",
-  "特定非営利活動法人",
-  "宗教法人",
-  "学校法人",
-  "農業協同組合連合会",
-  "生活協同組合連合会",
-  "生活協同組合",
-  "協同組合",
-];
+/**
+ * 法人番号（13桁）→ 法人ページのスラッグ。
+ *
+ * 法人の名寄せキーは法人名ではなく法人番号にしている。
+ * 法人名で寄せると「社会福祉法人札幌慈啓会」と「社会福祉法人　札幌慈啓会」が別ページに割れ、
+ * 逆に同名の別法人が1ページに混ざる。法人番号なら表記に左右されない。
+ *
+ * 法人番号が無い／13桁でない場合は空文字を返す＝法人ページを作らない。
+ */
+export function corpSlugFromNumber(corporateNumber: string | null | undefined): string {
+  const n = normalizeCorporateNumber(corporateNumber);
+  return n ? `c${n}` : "";
+}
+
+/** 法人番号を13桁の半角数字に正規化する。13桁でなければ空文字。 */
+export function normalizeCorporateNumber(v: string | null | undefined): string {
+  if (!v) return "";
+  const digits = toHankakuDigits(String(v)).replace(/[^0-9]/g, "");
+  return digits.length === 13 ? digits : "";
+}
+
+/** 全角数字を半角に寄せる（法人番号・検索キーの比較用） */
+export function toHankakuDigits(s: string): string {
+  return s.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
+}
 
 /**
- * 法人名 → スラッグの素（衝突解決前）。
- * 法人格の表記（株式会社/社会福祉法人 …）は前後どちらにあっても落とす。
- * 【未確定】市区町村と同じ理由で日本語を残している。
+ * 法人名の比較用の正規化。
+ * 出典には全角スペース・半角スペースの有無だけが違う表記が多数あるため、
+ * 空白をすべて落としたうえで比較し、「最も多く出現した表記」を表示名に採用する。
  */
-export function corpSlugBase(name: string | null | undefined): string {
+export function normalizeCorpName(name: string | null | undefined): string {
   if (!name) return "";
-  let s = name.trim().replace(/\s+/g, "");
-  for (const p of CORP_PREFIXES) {
-    if (s.startsWith(p)) { s = s.slice(p.length); break; }
-    if (s.endsWith(p)) { s = s.slice(0, -p.length); break; }
-  }
-  s = s.replace(/[/?#%&（）()「」【】]/g, "");
-  return s || (name.trim().replace(/\s+/g, "") || "");
+  return name.replace(/[\s　]+/g, "").trim();
+}
+
+/**
+ * 住所・地名の検索キー正規化。
+ * 全角英数字を半角に、空白・ハイフン類の揺れを落として比較できる形にする。
+ * （place テーブルの key と、利用者が入力した文字列の双方に同じ関数を通す）
+ */
+export function placeKey(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .normalize("NFKC")
+    .replace(/[\s　]+/g, "")
+    .replace(/[‐－―ー−–—]/g, "-")
+    .trim();
 }
 
 /** 決定的な短いハッシュ（未知サービス種別のスラッグなどに使う） */

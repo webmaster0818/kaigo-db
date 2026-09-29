@@ -1,10 +1,10 @@
 // サイト共通定数
 //
-// 【未確定】本番ドメインは未決定。決まったら NEXT_PUBLIC_SITE_URL を
+// 本番ドメイン: kaigo-database.com（2026-09-29 取得）。環境変数で上書き可。
 // .env / wrangler の vars に設定するか、ここの既定値を書き換える。
 // canonical はページごとの自己参照でこの値を使う（layout に canonical:'/' は置かない）。
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://kaigo-db.jp").replace(/\/$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://kaigo-database.com").replace(/\/$/, "");
 export const SITE_NAME = "かいごDB";
 export const SITE_TAGLINE = "介護施設データベース";
 
