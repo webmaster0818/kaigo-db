@@ -15,8 +15,12 @@
     {
       "binding": "DB",
       "database_name": "kaigo-db",
-      "database_id": "PLACEHOLDER_RUN_WRANGLER_D1_CREATE"
+      "database_id": "6486c49a-3b60-49f1-a3f9-b8c46a8f10e4"
     }
+  ],
+  "routes": [
+    { "pattern": "kaigo-database.com", "custom_domain": true },
+    { "pattern": "www.kaigo-database.com", "custom_domain": true }
   ],
   "observability": {
     "enabled": true
