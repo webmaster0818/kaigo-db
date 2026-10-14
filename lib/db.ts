@@ -9,6 +9,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { bboxWhere, withinRadius, type LatLng } from "./geo";
 import { placeKey } from "./slug";
+import { SITE_URL } from "./site";
 
 // ---------------------------------------------------------------------------
 // 型
@@ -160,34 +161,122 @@ function createSqliteDriver(): DbDriver {
   }
 }
 
-function getDriver(): DbDriver {
+function getDriver(): { driver: DbDriver; isD1: boolean } {
   try {
     const ctx = getCloudflareContext() as unknown as { env?: Record<string, unknown> };
     const d1 = ctx?.env?.DB as D1Database | undefined;
-    if (d1) return new D1Driver(d1);
+    if (d1) return { driver: new D1Driver(d1), isD1: true };
   } catch {
     // 開発環境では getCloudflareContext() が無効 → sqlite にフォールバック
   }
-  return createSqliteDriver();
+  return { driver: createSqliteDriver(), isD1: false };
 }
 
-/** テーブル未作成・DB未接続でも落とさない */
+/**
+ * D1 の取得失敗。
+ *
+ * 以前は D1 の失敗も「0件」として飲み込んでいたため、無料枠の行読み取り上限
+ * (5M rows/日) を超えた日に /area/ 等が「データ準備中」を 200 で返し、
+ * /facility/・/hojin/ は 404 を返していた（2026-09-30 okina 報告、2026-10-14 再現）。
+ * 404 は検索エンジンに「ページが消えた」と伝えてしまうので、本番(D1)の失敗は
+ * 例外として投げ、5xx（一時的な障害）として返す。
+ * 開発機の sqlite 未投入・テーブル未作成は従来どおり 0件扱い（EmptyState）。
+ */
+export class DbUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super(`D1 query failed: ${(cause as Error)?.message ?? String(cause)}`);
+    this.name = "DbUnavailableError";
+  }
+}
+
 async function safeAll<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  const { driver, isD1 } = getDriver();
   try {
-    return await getDriver().all<T>(sql, params);
+    return await driver.all<T>(sql, params);
   } catch (e) {
+    if (isD1) {
+      console.error("[db] D1 query failed:", (e as Error).message);
+      throw new DbUnavailableError(e);
+    }
     if (process.env.NODE_ENV !== "production") console.warn("[db] query failed:", (e as Error).message);
     return [];
   }
 }
 
 async function safeGet<T>(sql: string, params: unknown[] = []): Promise<T | undefined> {
+  const { driver, isD1 } = getDriver();
   try {
-    return await getDriver().get<T>(sql, params);
+    return await driver.get<T>(sql, params);
   } catch (e) {
+    if (isD1) {
+      console.error("[db] D1 query failed:", (e as Error).message);
+      throw new DbUnavailableError(e);
+    }
     if (process.env.NODE_ENV !== "production") console.warn("[db] query failed:", (e as Error).message);
     return undefined;
   }
+}
+
+// ---------------------------------------------------------------------------
+// 全体集計のキャッシュ
+// ---------------------------------------------------------------------------
+//
+// facility 全件を数える集計（siteStats / typeCounts など）は1回で 1.7万〜3.2万行を読む。
+// これがトップや一覧のリクエストごとに走り、D1 無料枠(5M rows/日)を毎日使い切っていた
+// （2026-10-12〜13 の実測: siteStats 924回で 29.7M行、typeCounts 984回で 16.5M行）。
+// 引数を取らない全体集計だけを、isolate 内メモ＋Workers の Cache API で数時間キャッシュする。
+// データは `scripts/deploy.sh load` のときしか変わらないので、値の鮮度の問題は小さい
+// （データ更新直後に即反映したいときは Cloudflare のキャッシュを全削除する）。
+// 空の結果・失敗はキャッシュしない。
+
+const AGG_TTL_SEC = 6 * 60 * 60;
+const memo = new Map<string, { at: number; value: unknown }>();
+
+function isEmptyResult(v: unknown): boolean {
+  if (v == null) return true;
+  if (Array.isArray(v)) return v.length === 0;
+  return false;
+}
+
+async function cachedAgg<T>(key: string, fn: () => Promise<T>, isEmpty: (v: T) => boolean = isEmptyResult): Promise<T> {
+  const now = Date.now();
+  const m = memo.get(key);
+  if (m && now - m.at < AGG_TTL_SEC * 1000) return m.value as T;
+
+  // Cache API は Workers 上でのみ使う（開発機の Node では素通り）
+  const cacheStore = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
+  const { isD1 } = getDriver();
+  const req = isD1 && cacheStore ? new Request(`${SITE_URL}/__agg/${encodeURIComponent(key)}`) : null;
+  if (req && cacheStore) {
+    try {
+      const hit = await cacheStore.match(req);
+      if (hit) {
+        const value = (await hit.json()) as T;
+        memo.set(key, { at: now, value });
+        return value;
+      }
+    } catch {
+      // キャッシュの不調は無視してDBを読む
+    }
+  }
+
+  const value = await fn();
+  if (!isEmpty(value)) {
+    memo.set(key, { at: now, value });
+    if (req && cacheStore) {
+      try {
+        await cacheStore.put(
+          req,
+          new Response(JSON.stringify(value), {
+            headers: { "content-type": "application/json", "cache-control": `public, max-age=${AGG_TTL_SEC}` },
+          }),
+        );
+      } catch {
+        // 書けなくても表示は続ける
+      }
+    }
+  }
+  return value;
 }
 
 // ---------------------------------------------------------------------------
@@ -244,8 +333,10 @@ export const queries = {
   },
 
   async totalCount(): Promise<number> {
-    const r = await safeGet<{ n: number }>("SELECT COUNT(*) AS n FROM facility", []);
-    return r?.n ?? 0;
+    return cachedAgg("totalCount", async () => {
+      const r = await safeGet<{ n: number }>("SELECT COUNT(*) AS n FROM facility", []);
+      return Number(r?.n ?? 0);
+    }, (n) => n === 0);
   },
 
   // ---- 施設 ----
@@ -265,11 +356,11 @@ export const queries = {
 
   // ---- エリア ----
   async prefectures(): Promise<Array<{ pref_slug: string; prefecture: string; facility_count: number; city_count: number }>> {
-    return safeAll(
+    return cachedAgg("prefectures", () => safeAll(
       `SELECT pref_slug, prefecture, SUM(facility_count) AS facility_count, COUNT(*) AS city_count
        FROM area WHERE pref_slug <> '' GROUP BY pref_slug, prefecture
        ORDER BY facility_count DESC`,
-    );
+    ));
   },
 
   async citiesByPref(prefSlug: string): Promise<AreaRow[]> {
@@ -312,11 +403,11 @@ export const queries = {
 
   // ---- 種別 ----
   async typeCounts(): Promise<TypeCount[]> {
-    return safeAll<TypeCount>(
+    return cachedAgg("typeCounts", () => safeAll<TypeCount>(
       `SELECT service_type, service_type_slug, MAX(is_residential) AS is_residential, COUNT(*) AS facility_count
        FROM facility GROUP BY service_type_slug, service_type
        ORDER BY is_residential DESC, facility_count DESC`,
-    );
+    ));
   },
 
   async typeBySlug(slug: string): Promise<TypeCount | undefined> {
@@ -586,6 +677,10 @@ export const queries = {
    * meta にも import 時の値を入れてあるが、こちらはDBを直接数えるので常に現物と一致する。
    */
   async siteStats(): Promise<SiteStats> {
+    return cachedAgg("siteStats", () => queries.siteStatsUncached(), (v) => v.facilities === 0);
+  },
+
+  async siteStatsUncached(): Promise<SiteStats> {
     const r = await safeGet<Record<string, number>>(
       `SELECT
          (SELECT COUNT(*) FROM facility) AS facilities,
@@ -628,6 +723,10 @@ export const queries = {
 
   // ---- /data/ の充足率 ----
   async coverage(): Promise<{ total: number; fields: Array<{ key: string; label: string; filled: number }> }> {
+    return cachedAgg("coverage", () => queries.coverageUncached(), (v) => v.total === 0);
+  },
+
+  async coverageUncached(): Promise<{ total: number; fields: Array<{ key: string; label: string; filled: number }> }> {
     const row = await safeGet<Record<string, number>>(
       `SELECT
          COUNT(*) AS total,
@@ -665,11 +764,11 @@ export const queries = {
 
   /** /data/ の種別内訳 */
   async coverageByType(): Promise<Array<{ service_type: string; service_type_slug: string; n: number; f_capacity: number; f_url: number }>> {
-    return safeAll(
+    return cachedAgg("coverageByType", () => safeAll(
       `SELECT service_type, service_type_slug, COUNT(*) AS n,
               SUM(CASE WHEN capacity IS NOT NULL THEN 1 ELSE 0 END) AS f_capacity,
               SUM(CASE WHEN official_url IS NOT NULL AND official_url <> '' THEN 1 ELSE 0 END) AS f_url
        FROM facility GROUP BY service_type_slug, service_type ORDER BY n DESC`,
-    );
+    ));
   },
 };

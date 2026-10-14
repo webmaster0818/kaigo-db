@@ -35,6 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: abs("/"), priority: 1 },
     { url: abs("/area/"), priority: 0.8 },
     { url: abs("/type/"), priority: 0.8 },
+    { url: abs("/hojin/"), priority: 0.6 },
     { url: abs("/data/"), priority: 0.5 },
     ...rankingEntries,
     ...prefSlugs.map((p) => ({ url: abs(`/area/${seg(p)}/`), priority: 0.7 })),

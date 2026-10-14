@@ -18,6 +18,12 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ja_JP",
     siteName: SITE_NAME,
+    // サイト共通の既定OG画像（数字は入れていない）。ページ側で openGraph を書く場合は images も渡すこと
+    images: [{ url: "/og-default.png?v=20261014", width: 1200, height: 630, alt: `${SITE_NAME}｜全国の介護施設・事業所データベース` }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og-default.png?v=20261014"],
   },
 };
 
