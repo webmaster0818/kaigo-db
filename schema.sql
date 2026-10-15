@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS corporation;
 DROP TABLE IF EXISTS area;
 DROP TABLE IF EXISTS place;
 DROP TABLE IF EXISTS meta;
+DROP TABLE IF EXISTS agg;
 
 -- ---------------------------------------------------------------------------
 -- facility: 事業所（1行1事業所×1サービス種別）
@@ -163,4 +164,14 @@ CREATE INDEX idx_place_kind ON place(kind, facility_count DESC);
 CREATE TABLE meta (
   key   TEXT PRIMARY KEY,
   value TEXT
+);
+
+-- ---------------------------------------------------------------------------
+-- agg: 全体集計の事前計算（key → JSON）。中身は scripts/agg.sql が作る。
+--   facility 全件を数える集計をリクエストごとに走らせないためのもの（D1 無料枠対策）。
+--   meta と分けているのは、meta が全ページで全行読まれるため（sitemap の id 一覧は約65万文字ある）。
+-- ---------------------------------------------------------------------------
+CREATE TABLE agg (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 );

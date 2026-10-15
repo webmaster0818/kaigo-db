@@ -279,6 +279,35 @@ async function cachedAgg<T>(key: string, fn: () => Promise<T>, isEmpty: (v: T) =
   return value;
 }
 
+/**
+ * agg テーブル（scripts/agg.sql で load 時に事前計算した全体集計）から1行読む。
+ * 1回あたりの D1 読み取りは1行。テーブルや key が無い・壊れているときは undefined を返し、
+ * 呼び出し側は従来どおり facility を数える（*Live）。
+ */
+async function readAgg<T>(key: string): Promise<T | undefined> {
+  const { driver } = getDriver();
+  try {
+    const r = await driver.get<{ value: string | null }>("SELECT value FROM agg WHERE key = ?", [key]);
+    if (r?.value == null) {
+      console.warn(`[db] agg '${key}' がありません。scripts/deploy.sh agg を実行してください（facility を直接数えます）`);
+      return undefined;
+    }
+    return JSON.parse(r.value) as T;
+  } catch (e) {
+    console.warn(`[db] agg '${key}' を読めませんでした:`, (e as Error).message);
+    return undefined;
+  }
+}
+
+/** 事前計算があればそれを、無ければ live を使う。どちらも cachedAgg で包む */
+function aggOrLive<T>(key: string, live: () => Promise<T>, isEmpty: (v: T) => boolean = isEmptyResult): Promise<T> {
+  return cachedAgg(key, async () => {
+    const pre = await readAgg<T>(key);
+    if (pre !== undefined && !isEmpty(pre)) return pre;
+    return live();
+  }, isEmpty);
+}
+
 // ---------------------------------------------------------------------------
 // クエリ
 // ---------------------------------------------------------------------------
@@ -333,10 +362,8 @@ export const queries = {
   },
 
   async totalCount(): Promise<number> {
-    return cachedAgg("totalCount", async () => {
-      const r = await safeGet<{ n: number }>("SELECT COUNT(*) AS n FROM facility", []);
-      return Number(r?.n ?? 0);
-    }, (n) => n === 0);
+    // siteStats.facilities と同じ値（SELECT COUNT(*) FROM facility）
+    return (await queries.siteStats()).facilities;
   },
 
   // ---- 施設 ----
@@ -356,7 +383,7 @@ export const queries = {
 
   // ---- エリア ----
   async prefectures(): Promise<Array<{ pref_slug: string; prefecture: string; facility_count: number; city_count: number }>> {
-    return cachedAgg("prefectures", () => safeAll(
+    return aggOrLive("prefectures", () => safeAll(
       `SELECT pref_slug, prefecture, SUM(facility_count) AS facility_count, COUNT(*) AS city_count
        FROM area WHERE pref_slug <> '' GROUP BY pref_slug, prefecture
        ORDER BY facility_count DESC`,
@@ -403,19 +430,16 @@ export const queries = {
 
   // ---- 種別 ----
   async typeCounts(): Promise<TypeCount[]> {
-    return cachedAgg("typeCounts", () => safeAll<TypeCount>(
+    return aggOrLive("typeCounts", () => safeAll<TypeCount>(
       `SELECT service_type, service_type_slug, MAX(is_residential) AS is_residential, COUNT(*) AS facility_count
        FROM facility GROUP BY service_type_slug, service_type
        ORDER BY is_residential DESC, facility_count DESC`,
     ));
   },
 
+  /** typeCounts の1行と同じ（同じ GROUP BY を1種別に絞っただけ） */
   async typeBySlug(slug: string): Promise<TypeCount | undefined> {
-    return safeGet<TypeCount>(
-      `SELECT service_type, service_type_slug, MAX(is_residential) AS is_residential, COUNT(*) AS facility_count
-       FROM facility WHERE service_type_slug = ? GROUP BY service_type_slug, service_type`,
-      [slug],
-    );
+    return (await queries.typeCounts()).find((t) => t.service_type_slug === slug);
   },
 
   async facilitiesByType(slug: string, limit = 100, offset = 0): Promise<Facility[]> {
@@ -428,6 +452,12 @@ export const queries = {
 
   /** 種別ページの都道府県別内訳 */
   async typePrefBreakdown(slug: string): Promise<Array<{ pref_slug: string; prefecture: string; n: number }>> {
+    // 存在しない種別は数えるまでもなく0件（任意の文字列でキャッシュを増やさない）
+    if (!(await queries.typeBySlug(slug))) return [];
+    return aggOrLive(`typePref:${slug}`, () => queries.typePrefBreakdownLive(slug));
+  },
+
+  async typePrefBreakdownLive(slug: string): Promise<Array<{ pref_slug: string; prefecture: string; n: number }>> {
     return safeAll(
       `SELECT pref_slug, prefecture, COUNT(*) AS n FROM facility
        WHERE service_type_slug = ? AND pref_slug <> '' GROUP BY pref_slug, prefecture ORDER BY n DESC`,
@@ -674,10 +704,11 @@ export const queries = {
   // ---- トップページに出す実測値 ----
   /**
    * すべて取り込み済みのデータから数える（推測値・固定値は置かない）。
-   * meta にも import 時の値を入れてあるが、こちらはDBを直接数えるので常に現物と一致する。
+   * 通常は scripts/agg.sql が load 時に同じSQLで数えて agg に入れた値を読む（1行）。
+   * agg が無いときだけ siteStatsUncached で直接数える。
    */
   async siteStats(): Promise<SiteStats> {
-    return cachedAgg("siteStats", () => queries.siteStatsUncached(), (v) => v.facilities === 0);
+    return aggOrLive("siteStats", () => queries.siteStatsUncached(), (v) => !v || !(v.facilities > 0));
   },
 
   async siteStatsUncached(): Promise<SiteStats> {
@@ -705,6 +736,9 @@ export const queries = {
   // ---- sitemap 用 ----
   /** index 対象の施設IDのみ（noindexページはsitemapに載せない） */
   async indexableFacilityIds(limit = 45000): Promise<Array<{ id: string }>> {
+    // 事前計算した id 一覧（JSON配列・1行）を読む。sitemap は取得のたびに 2.8万行読んでいた
+    const pre = await readAgg<string[]>("indexableFacilityIds");
+    if (pre && pre.length > 0) return pre.slice(0, limit).map((id) => ({ id }));
     return safeAll<{ id: string }>("SELECT id FROM facility WHERE is_indexable = 1 ORDER BY id LIMIT ?", [limit]);
   },
 
@@ -723,7 +757,11 @@ export const queries = {
 
   // ---- /data/ の充足率 ----
   async coverage(): Promise<{ total: number; fields: Array<{ key: string; label: string; filled: number }> }> {
-    return cachedAgg("coverage", () => queries.coverageUncached(), (v) => v.total === 0);
+    return cachedAgg("coverage", async () => {
+      const pre = await readAgg<Record<string, number>>("coverage");
+      if (pre && Number(pre.total) > 0) return coverageFromRow(pre);
+      return queries.coverageUncached();
+    }, (v) => v.total === 0);
   },
 
   async coverageUncached(): Promise<{ total: number; fields: Array<{ key: string; label: string; filled: number }> }> {
@@ -744,27 +782,12 @@ export const queries = {
          SUM(CASE WHEN is_indexable = 1 THEN 1 ELSE 0 END) AS f_indexable
        FROM facility`,
     );
-    const total = Number(row?.total ?? 0);
-    const fields = [
-      { key: "name", label: "事業所名", filled: Number(row?.f_name ?? 0) },
-      { key: "address", label: "住所", filled: Number(row?.f_address ?? 0) },
-      { key: "pref", label: "都道府県", filled: Number(row?.f_pref ?? 0) },
-      { key: "city", label: "市区町村", filled: Number(row?.f_city ?? 0) },
-      { key: "latlng", label: "緯度・経度", filled: Number(row?.f_latlng ?? 0) },
-      { key: "tel", label: "電話番号", filled: Number(row?.f_tel ?? 0) },
-      { key: "corp", label: "法人名", filled: Number(row?.f_corp ?? 0) },
-      { key: "corpno", label: "法人番号（法人ページの名寄せキー）", filled: Number(row?.f_corpno ?? 0) },
-      { key: "capacity", label: "定員（1人以上の記載）", filled: Number(row?.f_capacity ?? 0) },
-      { key: "days", label: "利用可能曜日", filled: Number(row?.f_days ?? 0) },
-      { key: "url", label: "公式URL", filled: Number(row?.f_url ?? 0) },
-      { key: "indexable", label: "（参考）index対象＝公式URLか定員あり", filled: Number(row?.f_indexable ?? 0) },
-    ];
-    return { total, fields };
+    return coverageFromRow(row);
   },
 
   /** /data/ の種別内訳 */
   async coverageByType(): Promise<Array<{ service_type: string; service_type_slug: string; n: number; f_capacity: number; f_url: number }>> {
-    return cachedAgg("coverageByType", () => safeAll(
+    return aggOrLive("coverageByType", () => safeAll(
       `SELECT service_type, service_type_slug, COUNT(*) AS n,
               SUM(CASE WHEN capacity IS NOT NULL THEN 1 ELSE 0 END) AS f_capacity,
               SUM(CASE WHEN official_url IS NOT NULL AND official_url <> '' THEN 1 ELSE 0 END) AS f_url
@@ -772,3 +795,22 @@ export const queries = {
     ));
   },
 };
+
+function coverageFromRow(row: Record<string, number> | undefined): { total: number; fields: Array<{ key: string; label: string; filled: number }> } {
+  const total = Number(row?.total ?? 0);
+  const fields = [
+    { key: "name", label: "事業所名", filled: Number(row?.f_name ?? 0) },
+    { key: "address", label: "住所", filled: Number(row?.f_address ?? 0) },
+    { key: "pref", label: "都道府県", filled: Number(row?.f_pref ?? 0) },
+    { key: "city", label: "市区町村", filled: Number(row?.f_city ?? 0) },
+    { key: "latlng", label: "緯度・経度", filled: Number(row?.f_latlng ?? 0) },
+    { key: "tel", label: "電話番号", filled: Number(row?.f_tel ?? 0) },
+    { key: "corp", label: "法人名", filled: Number(row?.f_corp ?? 0) },
+    { key: "corpno", label: "法人番号（法人ページの名寄せキー）", filled: Number(row?.f_corpno ?? 0) },
+    { key: "capacity", label: "定員（1人以上の記載）", filled: Number(row?.f_capacity ?? 0) },
+    { key: "days", label: "利用可能曜日", filled: Number(row?.f_days ?? 0) },
+    { key: "url", label: "公式URL", filled: Number(row?.f_url ?? 0) },
+    { key: "indexable", label: "（参考）index対象＝公式URLか定員あり", filled: Number(row?.f_indexable ?? 0) },
+  ];
+  return { total, fields };
+}

@@ -779,6 +779,8 @@ function main() {
     for (const p of places) insPlace.run(p.key, p.name, p.kind, p.pref_slug, p.city_slug, p.lat, p.lng, p.facility_count);
     for (const [k, v] of metaRows) insMeta.run(k, v);
   })();
+  // 全体集計の事前計算（本番D1でも同じSQLを最後に流す）
+  db.exec(fs.readFileSync(path.resolve(root, "scripts", "agg.sql"), "utf8"));
   db.close();
   console.log(`\nSQLite を書き出しました: ${outPath}`);
 
@@ -842,6 +844,9 @@ function main() {
   }
   for (const [k, v] of metaRows) tail.push(`INSERT OR REPLACE INTO meta (key,value) VALUES (${q(k)},${q(v)});`);
   writeChunks("area_meta", tail);
+  // 全体集計の事前計算。facility・corporation・area が入ったあとに流す必要があるので最後の番号にする
+  fs.copyFileSync(path.resolve(root, "scripts", "agg.sql"), path.join(sqlDir, `${String(part).padStart(3, "0")}_agg.sql`));
+  part++;
 
   console.log(`D1投入用SQL を書き出しました: ${sqlDir} (${part}ファイル)`);
   console.log("\n次の手順:");

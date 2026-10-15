@@ -8,6 +8,7 @@
 # 使い方:
 #   scripts/deploy.sh init     D1を作る（最初の1回だけ）
 #   scripts/deploy.sh load     31,441施設ぶんのデータを本番D1へ投入（最初の1回だけ／データ更新時）
+#   scripts/deploy.sh agg      全体集計(agg テーブル)だけを本番D1で作り直す（load の最後でも流れる）
 #   scripts/deploy.sh ship     ビルドしてWorkerをデプロイ（毎回これ）
 #   scripts/deploy.sh verify   本番URLを叩いて反映を確認
 set -euo pipefail
@@ -50,6 +51,14 @@ case "${1:-}" in
                  union all select 'area', count(*) from area;"
     ;;
 
+  agg)
+    # scripts/agg.sql: siteStats・種別件数・都道府県別内訳・sitemap の id 一覧などを数えて agg に入れる。
+    # 1回で数十万行を読むので、load 直後（data/d1 の最後のファイル）と、集計の形を変えたときだけ流す。
+    npx wrangler d1 execute "$DB_NAME" --remote --yes --file scripts/agg.sql
+    npx wrangler d1 execute "$DB_NAME" --remote --yes \
+      --command "select key, length(value) as bytes from agg order by key;"
+    ;;
+
   ship)
     npx opennextjs-cloudflare build
     npx wrangler deploy
@@ -67,7 +76,7 @@ case "${1:-}" in
     ;;
 
   *)
-    sed -n '2,20p' "$0"
+    sed -n '2,21p' "$0"
     exit 1
     ;;
 esac
