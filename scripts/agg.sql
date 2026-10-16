@@ -95,3 +95,15 @@ FROM (
 INSERT OR REPLACE INTO agg (key, value)
 SELECT 'indexableFacilityIds', COALESCE(json_group_array(id), '[]')
 FROM (SELECT id FROM facility WHERE is_indexable = 1 ORDER BY id);
+
+-- sitemap の市区町村（施設1件以上・pref_slug, city_slug 順）。[[pref_slug, city_slug], ...]
+-- lib/db.ts sitemapAreaSlugs の live と同じ条件・並び順。
+INSERT OR REPLACE INTO agg (key, value)
+SELECT 'sitemapAreas', COALESCE(json_group_array(json_array(pref_slug, city_slug)), '[]')
+FROM (SELECT pref_slug, city_slug FROM area WHERE facility_count > 0 ORDER BY pref_slug, city_slug);
+
+-- sitemap の法人 slug（/hojin/sitemap.xml）。事業所1件以上＝listRobots で index になる法人すべて。
+-- 並びは facility_count DESC, slug（lib/db.ts allCorporationSlugs の live と同じ）。
+INSERT OR REPLACE INTO agg (key, value)
+SELECT 'corporationSlugs', COALESCE(json_group_array(slug), '[]')
+FROM (SELECT slug FROM corporation WHERE facility_count > 0 ORDER BY facility_count DESC, slug);

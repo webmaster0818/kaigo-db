@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/?lat=", "/?"],
       },
     ],
-    sitemap: abs("/sitemap.xml"),
+    // インデックスと子 sitemap をすべて載せる（子は /sitemap_index.xml と同じ）
+    sitemap: [abs("/sitemap_index.xml"), abs("/sitemap.xml"), abs("/hojin/sitemap.xml")],
   };
 }

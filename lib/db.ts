@@ -738,24 +738,36 @@ export const queries = {
   },
 
   // ---- sitemap 用 ----
+  // sitemap は検索エンジンが何度も取りに来るので、どれも agg（事前計算・1行）を読み、
+  // さらに cachedAgg（isolate 内メモ＋Cache API・6時間）で包む。1回の取得で読む D1 行は
+  // キャッシュ外れでも key ごとに1行、当たれば0行（2026-10-16）。
   /** index 対象の施設IDのみ（noindexページはsitemapに載せない） */
   async indexableFacilityIds(limit = 45000): Promise<Array<{ id: string }>> {
     // 事前計算した id 一覧（JSON配列・1行）を読む。sitemap は取得のたびに 2.8万行読んでいた
-    const pre = await readAgg<string[]>("indexableFacilityIds");
-    if (pre && pre.length > 0) return pre.slice(0, limit).map((id) => ({ id }));
-    return safeAll<{ id: string }>("SELECT id FROM facility WHERE is_indexable = 1 ORDER BY id LIMIT ?", [limit]);
+    const ids = await aggOrLive<string[]>("indexableFacilityIds", async () =>
+      (await safeAll<{ id: string }>("SELECT id FROM facility WHERE is_indexable = 1 ORDER BY id")).map((r) => r.id),
+    );
+    return ids.slice(0, limit).map((id) => ({ id }));
   },
 
-  async allAreas(): Promise<AreaRow[]> {
-    return safeAll<AreaRow>(
-      "SELECT pref_slug, prefecture, city_slug, city, facility_count FROM area WHERE facility_count > 0 ORDER BY pref_slug, city_slug",
+  /** sitemap 用の市区町村 [pref_slug, city_slug]（施設1件以上）。agg 'sitemapAreas' */
+  async sitemapAreaSlugs(): Promise<Array<[string, string]>> {
+    return aggOrLive<Array<[string, string]>>("sitemapAreas", async () =>
+      (await safeAll<{ pref_slug: string; city_slug: string }>(
+        "SELECT pref_slug, city_slug FROM area WHERE facility_count > 0 ORDER BY pref_slug, city_slug",
+      )).map((r) => [r.pref_slug, r.city_slug] as [string, string]),
     );
   },
 
-  async allCorporationSlugs(minFacilities = 1, limit = 5000): Promise<Array<{ slug: string }>> {
-    return safeAll<{ slug: string }>(
-      "SELECT slug FROM corporation WHERE facility_count >= ? ORDER BY facility_count DESC LIMIT ?",
-      [minFacilities, limit],
+  /**
+   * sitemap 用の法人 slug（事業所1件以上＝index 対象の法人すべて）。agg 'corporationSlugs'。
+   * 以前は事業所2件以上・上位3,000件だけで、1件の法人（約8,500件）と2件以上の残りが漏れていた。
+   */
+  async allCorporationSlugs(): Promise<string[]> {
+    return aggOrLive<string[]>("corporationSlugs", async () =>
+      (await safeAll<{ slug: string }>(
+        "SELECT slug FROM corporation WHERE facility_count > 0 ORDER BY facility_count DESC, slug",
+      )).map((r) => r.slug),
     );
   },
 
