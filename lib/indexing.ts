@@ -9,6 +9,8 @@
 // この判定は import 時（facility.is_indexable）とページ描画時の両方で使う。
 // 片方だけ直すと食い違うので、必ずこの関数を呼ぶこと。
 
+import { plausibleCapacity } from "./capacity";
+
 export interface IndexableInput {
   official_url?: string | null;
   capacity?: number | null;
@@ -17,7 +19,7 @@ export interface IndexableInput {
 /** 施設ページを index してよいか */
 export function isIndexableFacility(f: IndexableInput): boolean {
   const hasUrl = typeof f.official_url === "string" && f.official_url.trim().length > 0;
-  const hasCapacity = typeof f.capacity === "number" && Number.isFinite(f.capacity) && f.capacity > 0;
+  const hasCapacity = plausibleCapacity(f.capacity) != null;
   return hasUrl || hasCapacity;
 }
 

@@ -7,6 +7,7 @@
 -- ページ側は `SELECT value FROM agg WHERE key = ?`（1行）を読むだけにする。
 --
 -- 各 key の中身は lib/db.ts の該当クエリ（*Live）と同じSQL・同じ並び順で作ること。
+-- 定員の 1000 は lib/capacity.ts の MAX_PLAUSIBLE_CAPACITY と揃えること（範囲外は日付の混入などの誤値）。
 -- 実行: scripts/deploy.sh agg（本番D1）／ scripts/import.ts が開発用 sqlite にも流す。
 -- 何度流しても同じ結果になる（INSERT OR REPLACE）。
 
@@ -23,7 +24,7 @@ SELECT 'siteStats', json_object(
   'cities',       (SELECT COUNT(*) FROM area),
   'cities3',      (SELECT COUNT(*) FROM area WHERE facility_count >= 3),
   'prefs',        (SELECT COUNT(DISTINCT pref_slug) FROM area WHERE pref_slug <> ''),
-  'withCapacity', (SELECT COUNT(*) FROM facility WHERE capacity IS NOT NULL AND capacity > 0),
+  'withCapacity', (SELECT COUNT(*) FROM facility WHERE capacity IS NOT NULL AND capacity > 0 AND capacity <= 1000),
   'withGeo',      (SELECT COUNT(*) FROM facility WHERE lat IS NOT NULL AND lng IS NOT NULL)
 );
 
@@ -72,7 +73,7 @@ SELECT 'coverage', json_object(
   'f_tel', SUM(CASE WHEN tel IS NOT NULL AND tel <> '' THEN 1 ELSE 0 END),
   'f_corp', SUM(CASE WHEN corporation_name IS NOT NULL AND corporation_name <> '' THEN 1 ELSE 0 END),
   'f_corpno', SUM(CASE WHEN corporate_number IS NOT NULL AND corporate_number <> '' THEN 1 ELSE 0 END),
-  'f_capacity', SUM(CASE WHEN capacity IS NOT NULL THEN 1 ELSE 0 END),
+  'f_capacity', SUM(CASE WHEN capacity IS NOT NULL AND capacity > 0 AND capacity <= 1000 THEN 1 ELSE 0 END),
   'f_days', SUM(CASE WHEN open_days IS NOT NULL AND open_days <> '' THEN 1 ELSE 0 END),
   'f_url', SUM(CASE WHEN official_url IS NOT NULL AND official_url <> '' THEN 1 ELSE 0 END),
   'f_indexable', SUM(CASE WHEN is_indexable = 1 THEN 1 ELSE 0 END)
@@ -85,7 +86,7 @@ SELECT 'coverageByType', COALESCE(json_group_array(json_object(
   'f_capacity', f_capacity, 'f_url', f_url)), '[]')
 FROM (
   SELECT service_type, service_type_slug, COUNT(*) AS n,
-         SUM(CASE WHEN capacity IS NOT NULL THEN 1 ELSE 0 END) AS f_capacity,
+         SUM(CASE WHEN capacity IS NOT NULL AND capacity > 0 AND capacity <= 1000 THEN 1 ELSE 0 END) AS f_capacity,
          SUM(CASE WHEN official_url IS NOT NULL AND official_url <> '' THEN 1 ELSE 0 END) AS f_url
   FROM facility GROUP BY service_type_slug, service_type ORDER BY n DESC
 );

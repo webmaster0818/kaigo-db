@@ -38,6 +38,7 @@ import {
 import { resolveServiceType } from "../lib/serviceTypes";
 import { isIndexableFacility } from "../lib/indexing";
 import { isValidJapanLatLng } from "../lib/geo";
+import { MAX_PLAUSIBLE_CAPACITY, plausibleCapacity } from "../lib/capacity";
 
 // ---------------------------------------------------------------------------
 // 列名マッピング（2026-09-29 取得の実CSV 24列で確定）
@@ -432,7 +433,13 @@ function main() {
         if (corpNo) rawCorpNamesWithNumber.add(corpNameRaw);
       }
 
-      const capacity = normInt(cell("capacity"));
+      // 出典の「定員」列に日付（20191021 など）が入った行がある。数字だけ拾うと定員2千万人になるので、
+      // 範囲外（lib/capacity.ts）は推測で直さず NULL にして警告に出す。
+      const capacityRaw = normInt(cell("capacity"));
+      const capacity = plausibleCapacity(capacityRaw);
+      if (capacityRaw != null && capacity == null) {
+        warnings.push(`${base}: 事業所番号 ${no} の定員「${clean(cell("capacity"))}」は範囲外（1〜${MAX_PLAUSIBLE_CAPACITY}）→ NULL`);
+      }
       const official_url = normUrl(cell("official_url"));
 
       raws.push({

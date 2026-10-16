@@ -10,6 +10,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { bboxWhere, withinRadius, type LatLng } from "./geo";
 import { placeKey } from "./slug";
 import { SITE_URL } from "./site";
+import { CAPACITY_OK_SQL } from "./capacity";
 
 // ---------------------------------------------------------------------------
 // 型
@@ -312,8 +313,11 @@ function aggOrLive<T>(key: string, live: () => Promise<T>, isEmpty: (v: T) => bo
 // クエリ
 // ---------------------------------------------------------------------------
 
+// capacity は範囲外（日付の混入など。lib/capacity.ts）を NULL にして返す。どのページでも誤値を表示しないため。
 const FACILITY_COLS =
-  "id, jigyosho_no, name, service_type, service_type_slug, is_residential, postal_code, prefecture, pref_slug, city, city_slug, address, lat, lng, tel, corporate_number, corporation_name, corporation_slug, capacity, open_days, official_url, acquired_on, is_indexable";
+  "id, jigyosho_no, name, service_type, service_type_slug, is_residential, postal_code, prefecture, pref_slug, city, city_slug, address, lat, lng, tel, corporate_number, corporation_name, corporation_slug, " +
+  `CASE WHEN ${CAPACITY_OK_SQL} THEN capacity END AS capacity, ` +
+  "open_days, official_url, acquired_on, is_indexable";
 
 const CORP_COLS = "slug, corporate_number, name, facility_count, pref_count, name_variants";
 
@@ -342,7 +346,7 @@ function rankFilter(f: RankingFilter): { sql: string; params: unknown[] } {
  */
 export const CITY_SORTS = {
   default: "is_residential DESC, service_type ASC, name ASC",
-  capacity: "CASE WHEN capacity IS NULL OR capacity <= 0 THEN 1 ELSE 0 END ASC, capacity DESC, name ASC",
+  capacity: `CASE WHEN ${CAPACITY_OK_SQL} THEN 0 ELSE 1 END ASC, CASE WHEN ${CAPACITY_OK_SQL} THEN capacity END DESC, name ASC`,
   name: "name ASC",
 } as const;
 
@@ -499,7 +503,7 @@ export const queries = {
     const w = rankFilter(f);
     return safeAll<Facility>(
       `SELECT ${FACILITY_COLS} FROM facility
-       WHERE capacity IS NOT NULL AND capacity > 0${w.sql}
+       WHERE ${CAPACITY_OK_SQL}${w.sql}
        ORDER BY capacity DESC, name ASC, id ASC
        LIMIT ? OFFSET ?`,
       [...w.params, limit, offset],
@@ -511,7 +515,7 @@ export const queries = {
     const w = rankFilter(f);
     const r = await safeGet<{ total: number; with_capacity: number }>(
       `SELECT COUNT(*) AS total,
-              SUM(CASE WHEN capacity IS NOT NULL AND capacity > 0 THEN 1 ELSE 0 END) AS with_capacity
+              SUM(CASE WHEN ${CAPACITY_OK_SQL} THEN 1 ELSE 0 END) AS with_capacity
        FROM facility WHERE 1 = 1${w.sql}`,
       w.params,
     );
@@ -719,7 +723,7 @@ export const queries = {
          (SELECT COUNT(*) FROM area) AS cities,
          (SELECT COUNT(*) FROM area WHERE facility_count >= 3) AS cities3,
          (SELECT COUNT(DISTINCT pref_slug) FROM area WHERE pref_slug <> '') AS prefs,
-         (SELECT COUNT(*) FROM facility WHERE capacity IS NOT NULL AND capacity > 0) AS with_capacity,
+         (SELECT COUNT(*) FROM facility WHERE ${CAPACITY_OK_SQL}) AS with_capacity,
          (SELECT COUNT(*) FROM facility WHERE lat IS NOT NULL AND lng IS NOT NULL) AS with_geo`,
     );
     return {
@@ -776,7 +780,7 @@ export const queries = {
          SUM(CASE WHEN tel IS NOT NULL AND tel <> '' THEN 1 ELSE 0 END) AS f_tel,
          SUM(CASE WHEN corporation_name IS NOT NULL AND corporation_name <> '' THEN 1 ELSE 0 END) AS f_corp,
          SUM(CASE WHEN corporate_number IS NOT NULL AND corporate_number <> '' THEN 1 ELSE 0 END) AS f_corpno,
-         SUM(CASE WHEN capacity IS NOT NULL THEN 1 ELSE 0 END) AS f_capacity,
+         SUM(CASE WHEN ${CAPACITY_OK_SQL} THEN 1 ELSE 0 END) AS f_capacity,
          SUM(CASE WHEN open_days IS NOT NULL AND open_days <> '' THEN 1 ELSE 0 END) AS f_days,
          SUM(CASE WHEN official_url IS NOT NULL AND official_url <> '' THEN 1 ELSE 0 END) AS f_url,
          SUM(CASE WHEN is_indexable = 1 THEN 1 ELSE 0 END) AS f_indexable
@@ -789,7 +793,7 @@ export const queries = {
   async coverageByType(): Promise<Array<{ service_type: string; service_type_slug: string; n: number; f_capacity: number; f_url: number }>> {
     return aggOrLive("coverageByType", () => safeAll(
       `SELECT service_type, service_type_slug, COUNT(*) AS n,
-              SUM(CASE WHEN capacity IS NOT NULL THEN 1 ELSE 0 END) AS f_capacity,
+              SUM(CASE WHEN ${CAPACITY_OK_SQL} THEN 1 ELSE 0 END) AS f_capacity,
               SUM(CASE WHEN official_url IS NOT NULL AND official_url <> '' THEN 1 ELSE 0 END) AS f_url
        FROM facility GROUP BY service_type_slug, service_type ORDER BY n DESC`,
     ));
