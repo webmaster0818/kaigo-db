@@ -14,9 +14,9 @@ export async function generateMetadata(): Promise<Metadata> {
   // 0件（CSV未着）のときはハブも index しない
   const total = await queries.totalCount();
   return {
-    title: "並べ替えて探す（ファクト別の一覧）",
+    title: "並べ替えて探す（公表データの項目別の一覧）",
     description:
-      "定員・同一法人の運営施設数・市区町村あたりの施設数・現在地からの距離といった、公表データの値そのもので並べ替えた一覧です。複数項目を合成した総合ランキングは作成していません。",
+      "定員・同一法人の運営施設数・市区町村あたりの施設数・現在地からの距離といった、公表データの値にもとづいて並べ替えた一覧です。複数の項目を合成した総合ランキングは作成していません。",
     alternates: { canonical: abs("/ranking/") },
     robots: listRobots(total),
   };
@@ -32,24 +32,24 @@ export default async function RankingIndex() {
 
       <div className="mb-6 border-y border-line py-3 text-sm leading-relaxed">
         <p>
-          厚生労働省の公表データに入っている値そのもので並べ替えた一覧です。
-          どの値で並べているかは、各ページの冒頭に必ず書いています。
+          厚生労働省の公表データに記載されている値にもとづいて並べ替えた一覧です。
+          並べ替えの基準とした値は、各ページの冒頭に記載しています。
         </p>
         <p className="mt-1 text-muted">
           複数の項目を重み付けして合計した「総合ランキング」は作成していません。
-          重みの付け方に根拠を示せないためです。
+          重み付けの根拠を示すことができないためです。
         </p>
         <p className="mt-1 font-bold">{NOT_A_RECOMMENDATION}</p>
       </div>
 
       {total === 0 && (
         <div className="mb-6">
-          <EmptyState detail="データ投入後に、各軸の並べ替え結果をここから開けるようになります。" />
+          <EmptyState detail="データの掲載後に、各項目の並べ替え結果をこのページから表示できるようになります。" />
         </div>
       )}
 
       <section>
-        <h2 className="mb-2">並べ替えの軸</h2>
+        <h2 className="mb-2">並べ替えの基準</h2>
         <ul className="border-t border-line">
           {RANKING_AXES.map((a) => (
             <li key={a.href} className="border-b border-line py-3">
@@ -64,7 +64,7 @@ export default async function RankingIndex() {
       </section>
 
       <p className="mt-6 text-xs leading-relaxed text-muted">
-        いずれの一覧も、都道府県・サービス種別で絞り込めます。
+        いずれの一覧も、都道府県・サービス種別で絞り込むことができます。
         絞り込んだ結果が少ない組み合わせのページは、検索エンジンには登録していません。
       </p>
 

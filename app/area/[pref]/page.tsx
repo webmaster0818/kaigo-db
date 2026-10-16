@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const total = cities.reduce((s, c) => s + c.facility_count, 0);
   return {
     title: `${prefName}の介護施設・事業所一覧`,
-    description: `${prefName}の介護施設・事業所${total > 0 ? ` ${total.toLocaleString()}件` : ""}を市区町村別に掲載。厚生労働省の公表データに基づく事業所名・住所・定員・公式URLを確認できます。`,
+    description: `${prefName}の介護施設・事業所${total > 0 ? ` ${total.toLocaleString()}件` : ""}を市区町村別に掲載しています。厚生労働省の公表データにもとづく事業所名・住所・定員・公式URLを確認できます。`,
     alternates: { canonical: abs(`/area/${seg(pref)}/`) },
     robots: listRobots(total),
   };
@@ -50,7 +50,7 @@ export default async function PrefPage({ params }: { params: Params }) {
       <p className="mb-5 text-sm text-muted">
         {total > 0
           ? <>掲載 <span className="tabular-nums">{total.toLocaleString()}</span> 件／{cities.length} 市区町村</>
-          : "この都道府県のデータはまだ投入されていません。"}
+          : "この都道府県のデータは現在掲載しておりません。"}
       </p>
 
       {total === 0 ? (

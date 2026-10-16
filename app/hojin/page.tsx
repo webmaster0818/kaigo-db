@@ -13,7 +13,7 @@ const PER_PAGE = 100;
 export const metadata: Metadata = {
   title: "運営法人から探す",
   description:
-    "介護施設を運営している法人の一覧です。法人番号で名寄せし、同じ法人が運営する施設をまとめて確認できます。厚生労働省の公表データに基づく施設数付き。",
+    "介護施設を運営している法人の一覧です。法人番号で同一法人を判定し、同じ法人が運営する施設をまとめて確認できます。厚生労働省の公表データにもとづく施設数を表示しています。",
   alternates: { canonical: abs("/hojin/") },
 };
 
@@ -39,12 +39,12 @@ export default async function HojinIndex({
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "運営法人から探す" }]} />
       <h1 className="mb-2">運営法人から探す</h1>
       <p className="mb-2 text-sm text-muted">
-        施設を運営している法人の一覧です。<strong>法人番号で名寄せ</strong>しているため、
+        施設を運営している法人の一覧です。<strong>法人番号で同一法人を判定</strong>しているため、
         「社会福祉法人○○」と「社会福祉法人　○○」のような表記の違いがあっても同じ法人としてまとめています。
       </p>
       <p className="mb-5 text-xs text-muted">
-        並び順は「運営している施設数が多い順」です。施設数の多さは規模を示すもので、
-        <strong>当サイトによる評価・推薦ではありません</strong>。
+        表示順は、運営している施設数が多い順です。施設数は規模を示すものであり、
+        <strong>当サイトによる評価・推薦を示すものではありません</strong>。
         法人番号の記載がない施設は法人ページを作成していません。
       </p>
 

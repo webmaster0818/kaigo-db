@@ -45,10 +45,10 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
   const robots = rankingRobots({ rows, filters: p.filters, unknownFilter: p.unknownFilter });
 
   return {
-    title: label ? `${label}の介護施設を定員が多い順に並べる` : "介護施設を定員が多い順に並べる",
+    title: label ? `${label}の介護施設｜定員が多い順の一覧` : "介護施設｜定員が多い順の一覧",
     description:
       `${label ? `${label}の` : "全国の"}介護施設・事業所を、厚生労働省の公表データの「定員」が大きい順に並べた一覧です。` +
-      "定員の記載がある施設のみを対象としています。当サイトによる評価・推薦ではありません。",
+      "定員の記載がある施設のみを対象としています。当サイトによる評価・推薦を示すものではありません。",
     // index するページは絞り込み込みで自己参照、noindex のページは絞り込み無しの本体を指す
     alternates: { canonical: abs(robots.index ? withQuery(PATH, p.query) : PATH) },
     robots,
@@ -77,7 +77,7 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
           { name: label ? `定員が多い順（${label}）` : "定員が多い順" },
         ]}
       />
-      <h1 className="mb-3">{label ? `${label}の介護施設` : "全国の介護施設"}を定員が多い順に並べる</h1>
+      <h1 className="mb-3">{label ? `${label}の介護施設` : "全国の介護施設"}｜定員が多い順の一覧</h1>
 
       <RankingNote basis={AXIS.basis} extra={CAPACITY_COVERAGE_NOTE} />
 
@@ -85,21 +85,21 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
 
       {p.unknownFilter ? (
         <p className="card px-4 py-6 text-sm text-muted">
-          指定された条件が見つかりませんでした。上の絞り込みから選び直してください。
+          指定された条件に該当するページはありません。上の絞り込みから条件を選択してください。
         </p>
       ) : stats.with_capacity === 0 ? (
         <EmptyState
           detail={
             stats.total === 0
-              ? "厚生労働省の公表データを準備しています。公開までしばらくお待ちください。"
-              : "この条件では、定員の記載がある施設がありませんでした。条件を広げてお試しください。"
+              ? "厚生労働省の公表データを準備しております。公開までしばらくお待ちください。"
+              : "この条件では、定員の記載がある施設はありません。条件を広げてお試しください。"
           }
         />
       ) : (
         <>
           <dl className="mb-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
             <div>
-              <dt className="text-xs text-muted">この条件の掲載事業所</dt>
+              <dt className="text-xs text-muted">この条件の掲載施設</dt>
               <dd className="tabular-nums text-lg font-bold">{stats.total.toLocaleString()}</dd>
             </div>
             <div>
@@ -190,19 +190,19 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
           {stats.with_capacity > rows.length && (
             <p className="mt-3 text-xs text-muted">
               定員の記載がある{stats.with_capacity.toLocaleString()}件のうち、先頭{rows.length.toLocaleString()}件を表示しています。
-              件数を絞るには上の条件をご利用ください。
+              件数を絞り込む場合は、上の条件をご利用ください。
             </p>
           )}
         </>
       )}
 
       <p className="mt-6 text-xs leading-relaxed text-muted">
-        定員は出典データの値をそのまま表示しています（当サイトで推定した数値はありません）。
-        定員は建物の規模を表す数字であって、サービスの内容や質を表すものではありません。
+        定員は出典データの値をそのまま表示しています（当サイトで推定した数値は掲載していません）。
+        定員は施設の規模を示す数値であり、サービスの内容や質を示すものではありません。
       </p>
 
       <p className="mt-3 text-xs">
-        <Link href="/ranking/" className="text-accent hover:underline">ほかの並べ替えを見る →</Link>
+        <Link href="/ranking/" className="text-accent hover:underline">その他の並べ替え →</Link>
       </p>
 
       <SourceNote acquiredOn={meta.acquired_on} />

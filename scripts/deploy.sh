@@ -72,7 +72,7 @@ case "${1:-}" in
     done
     echo
     echo "== 掲載件数がページに出ているか（0件ならD1が空）"
-    curl -s "${SITE}/?cb=$RANDOM" | grep -o '掲載事業所数[^<]*' | head -1 || echo "(取得できず)"
+    curl -s "${SITE}/?cb=$RANDOM" | grep -o '掲載施設数[^<]*' | head -1 || echo "(取得できず)"
     ;;
 
   *)

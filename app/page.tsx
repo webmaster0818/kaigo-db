@@ -15,9 +15,9 @@ import SourceNote from "@/components/SourceNote";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME}｜実データで探す介護施設データベース`,
+  title: `${SITE_NAME}｜厚生労働省の公表データにもとづく介護施設データベース`,
   description:
-    "厚生労働省の公表データをそのまま検索できる介護施設データベースです。住所・地名からの距離、運営法人（法人番号）、市区町村、サービス種別で探せます。口コミ・独自ランキング・おすすめ順はありません。",
+    "厚生労働省の公表データにもとづく介護施設データベースです。住所・地名からの距離、運営法人（法人番号）、市区町村、サービス種別で施設を検索できます。口コミ・独自のランキング・おすすめ順は掲載していません。",
   alternates: { canonical: abs("/") },
 };
 
@@ -29,12 +29,12 @@ function matchNote(hit: PlaceHit, input: string): string {
   const where = `「${hit.name}」（掲載${hit.facility_count.toLocaleString()}件の平均位置）`;
   switch (hit.match) {
     case "station":
-      return `「${input}」は駅名として解釈せず、同じ名前の地名 ${where} を起点にしました。駅の座標そのものは掲載していません。`;
+      return `「${input}」は駅名としてではなく、同じ名称の地名 ${where} として検索の起点にしています。駅の座標は掲載していません。`;
     case "exact":
     case "prefix":
-      return `入力された住所から ${where} を起点にしました。`;
+      return `入力された住所にもとづき、${where} を検索の起点にしています。`;
     default:
-      return `「${input}」に一致する地名として ${where} を起点にしました。`;
+      return `「${input}」に一致する地名として、${where} を検索の起点にしています。`;
   }
 }
 
@@ -71,22 +71,22 @@ const ENTRANCES = [
     href: "#search",
     icon: "/img/icon-distance.webp",
     title: "住所・現在地から探す",
-    body: "実家の住所を入れると、そこから近い順に並べます。距離は直線距離で、道のりではありません。",
-    cta: "検索フォームへ",
+    body: "入力した住所から近い順に施設を表示します。距離は直線距離であり、道のりではありません。",
+    cta: "検索フォーム",
   },
   {
     href: "/type/",
     icon: "/img/icon-type.webp",
     title: "サービス種別から探す",
-    body: "特養・老健・グループホーム・有料老人ホームの4種別。費用の考え方や入居条件の違いもまとめています。",
-    cta: "種別一覧を見る",
+    body: "特養・老健・グループホーム・有料老人ホームの4種別を掲載しています。種別ごとの費用の考え方や入居条件の違いもまとめています。",
+    cta: "種別一覧",
   },
   {
     href: "/hojin/",
     icon: "/img/icon-hojin.webp",
     title: "運営法人から探す",
-    body: "同じ法人が運営する施設をまとめて確認できます。名寄せは法人名ではなく法人番号（13桁）で行っています。",
-    cta: "法人一覧を見る",
+    body: "同じ法人が運営する施設をまとめて確認できます。法人の同一性は、法人名ではなく法人番号（13桁）で判定しています。",
+    cta: "法人一覧",
   },
 ];
 
@@ -169,15 +169,15 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       <section>
         <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
           <div>
-            <span className="eyebrow">厚生労働省の公表データをそのまま掲載</span>
+            <span className="eyebrow">厚生労働省の公表データにもとづく施設情報</span>
             <h1 className="mt-3 mb-3">
-              親の住まいを、
+              公表データにもとづく
               <br />
-              事実だけで比べる。
+              介護施設の検索
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-muted">
-              全国{total > 0 ? total.toLocaleString() : ""}件の介護施設を、住所からの距離・市区町村・サービス種別・運営法人で探せるデータベースです。
-              空欄の項目は「記載なし」と表示し、推測では補いません。口コミ・独自の★評価・おすすめ順は掲載していません。
+              全国{total > 0 ? total.toLocaleString() : ""}件の介護施設を、住所からの距離・市区町村・サービス種別・運営法人で検索できるデータベースです。
+              公表データに記載のない項目は「記載なし」と表示し、推測による補完は行っていません。口コミ・独自の★評価・おすすめ順は掲載していません。
             </p>
           </div>
           {/* 装飾用イラスト。施設や入居者の実写ではないことが見て分かる絵柄にしている */}
@@ -217,15 +217,15 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           ) : !origin ? (
             <div className="card px-4 py-5 text-sm">
               <p className="font-bold">
-                {qRaw ? `「${qRaw}」に一致する地名が見つかりませんでした。` : "緯度・経度の値が正しくありません（日本国内の範囲で入力してください）。"}
+                {qRaw ? `「${qRaw}」に一致する地名は見つかりませんでした。` : "緯度・経度の値が正しくありません（日本国内の範囲で入力してください）。"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted">
-                地名は掲載データの住所から作っているため、掲載施設が1件も無い地域は検索できません。
-                市区町村名（例: 世田谷区、札幌市中央区）まで戻すと見つかりやすくなります。
+                地名は掲載データの住所から作成しているため、掲載施設のない地域は検索できません。
+                市区町村名（例: 世田谷区、札幌市中央区）で検索すると、該当する地名が見つかりやすくなります。
               </p>
               {suggestions.length > 0 && (
                 <>
-                  <p className="mt-3 text-xs font-bold">もしかして:</p>
+                  <p className="mt-3 text-xs font-bold">候補となる地名:</p>
                   <ul className="mt-1.5 flex flex-wrap gap-2 text-xs">
                     {suggestions.map((s) => (
                       <li key={s.key}>
@@ -249,12 +249,12 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                 <p>
                   {hit
                     ? matchNote(hit, qRaw)
-                    : `入力された緯度・経度（${lat.toFixed(4)}, ${lng.toFixed(4)}）を起点にしました。`}
+                    : `入力された緯度・経度（${lat.toFixed(4)}, ${lng.toFixed(4)}）を検索の起点にしています。`}
                 </p>
                 <p className="mt-0.5">
                   {sort === "capacity"
-                    ? "公表データの「定員」の値が大きい順に並べています（定員の記載がない施設は末尾に、近い順で置いています）。"
-                    : "起点から各施設の緯度・経度までの直線距離が短い順に並べています（道のりではありません）。"}
+                    ? "公表データの「定員」の値が大きい順に表示しています（定員の記載がない施設は、末尾に近い順で表示しています）。"
+                    : "起点から各施設の緯度・経度までの直線距離が短い順に表示しています（道のりではありません）。"}
                 </p>
                 <p className="mt-0.5 font-bold">{NOT_A_RECOMMENDATION}</p>
                 <p className="mt-1.5 text-muted">
@@ -266,7 +266,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               </div>
               <FacilityTable rows={results} showDistance />
               {results.length === 0 && (
-                <p className="mt-2 text-xs text-muted">距離を広げるか、サービス種別の絞り込みを外してみてください。</p>
+                <p className="mt-2 text-xs text-muted">該当する施設はありません。距離を広げるか、サービス種別の絞り込みを解除してください。</p>
               )}
             </>
           )}
@@ -283,7 +283,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           02 3つの入口
           ===================================================================== */}
       <section className="mt-12">
-        <h2 className="mb-4">探し方は3つあります</h2>
+        <h2 className="mb-4">3つの検索方法</h2>
         <ul className="grid gap-3 md:grid-cols-3">
           {ENTRANCES.map((e) => (
             <li key={e.href}>
@@ -304,9 +304,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       {total > 0 && (
         <section className="mt-10">
           <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <StatCard label="掲載事業所数" value={total.toLocaleString()} unit="件" note="特養・老健・グループホーム・有料老人ホーム" />
-            <StatCard label="掲載市区町村数" value={stats.cities.toLocaleString()} unit="市区町村" note={`うち3件以上あるのは${stats.cities3.toLocaleString()}市区町村`} />
-            <StatCard label="運営法人数" value={stats.corporations.toLocaleString()} unit="法人" note="法人番号（13桁）で名寄せした数" />
+            <StatCard label="掲載施設数" value={total.toLocaleString()} unit="件" note="特養・老健・グループホーム・有料老人ホーム" />
+            <StatCard label="掲載市区町村数" value={stats.cities.toLocaleString()} unit="市区町村" note={`うち3件以上の市区町村は${stats.cities3.toLocaleString()}`} />
+            <StatCard label="運営法人数" value={stats.corporations.toLocaleString()} unit="法人" note="法人番号（13桁）で同一法人を判定した数" />
             <StatCard label="データ取得日" value={meta.acquired_on ?? "-"} note={meta.imported_at ? `取り込み ${meta.imported_at}` : undefined} />
           </dl>
         </section>
@@ -320,7 +320,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           <SectionHeading
             icon="/img/icon-area.webp"
             title="エリアから探す"
-            lead={`地方から都道府県、市区町村の順に絞り込めます。掲載は${stats.prefs}都道府県・${stats.cities.toLocaleString()}市区町村です。数字はその都道府県の掲載件数です。`}
+            lead={`地方、都道府県、市区町村の順に絞り込むことができます。掲載範囲は${stats.prefs}都道府県・${stats.cities.toLocaleString()}市区町村です。数字は各都道府県の掲載件数です。`}
           />
           <div className="grid gap-3 md:grid-cols-2">
             {REGIONS.map((region) => {
@@ -372,7 +372,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           )}
 
           <p className="mt-4 text-xs">
-            <Link href="/area/" className="font-bold text-accent hover:underline">都道府県一覧をすべて見る →</Link>
+            <Link href="/area/" className="font-bold text-accent hover:underline">都道府県一覧 →</Link>
           </p>
         </section>
       )}
@@ -385,7 +385,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           <SectionHeading
             icon="/img/icon-type.webp"
             title="サービス種別から探す"
-            lead="今回の掲載対象は、住まいとして選ぶ入居系4種別です。種別ごとに入居条件も費用の仕組みも違います。"
+            lead="当サイトの掲載対象は、住まいとして利用する入居系の4種別です。入居条件や費用の仕組みは種別ごとに異なります。"
           />
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[...residential, ...otherTypes].map((t) => {
@@ -421,16 +421,16 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           <SectionHeading
             icon="/img/icon-hojin.webp"
             title="運営法人から探す"
-            lead="施設は法人単位で運営方針も人の配置も変わります。名寄せは法人名ではなく法人番号（13桁）で行っているため、「社会福祉法人札幌慈啓会」と「社会福祉法人　札幌慈啓会」のような表記の揺れも1つの法人にまとまります。"
+            lead="運営方針や人員配置は、運営法人ごとに異なります。法人の同一性は法人名ではなく法人番号（13桁）で判定しているため、「社会福祉法人札幌慈啓会」と「社会福祉法人　札幌慈啓会」のような表記の違いがあっても、同一の法人として集計しています。"
           />
           <div className="card overflow-x-auto p-1">
             <table className="w-full min-w-[520px] border-collapse text-sm">
-              <caption className="sr-only">掲載事業所数の多い運営法人 上位{topCorps.length}法人</caption>
+              <caption className="sr-only">掲載施設数の多い運営法人 上位{topCorps.length}法人</caption>
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-muted">
                   <th scope="col" className="w-10 py-2.5 pl-3 pr-2 text-right font-medium">#</th>
                   <th scope="col" className="py-2.5 pr-3 font-medium">運営法人</th>
-                  <th scope="col" className="w-24 py-2.5 pr-3 text-right font-medium">事業所数</th>
+                  <th scope="col" className="w-24 py-2.5 pr-3 text-right font-medium">施設数</th>
                   <th scope="col" className="w-28 py-2.5 pr-3 text-right font-medium">展開都道府県</th>
                 </tr>
               </thead>
@@ -451,11 +451,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             </table>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            掲載している{stats.corporations.toLocaleString()}法人のうち、事業所数の多い{topCorps.length}法人です。
-            件数は当サイトに掲載している4種別（特養・老健・グループホーム・有料老人ホーム）の範囲での数で、法人の規模そのものではありません。
+            掲載している{stats.corporations.toLocaleString()}法人のうち、施設数の多い{topCorps.length}法人です。
+            件数は当サイトに掲載している4種別（特養・老健・グループホーム・有料老人ホーム）の範囲での数であり、法人の規模を示すものではありません。
             全法人は{" "}
             <Link href="/hojin/" className="text-accent hover:underline">運営法人一覧</Link>
-            {" "}から辿れます。
+            {" "}からご確認いただけます。
           </p>
         </section>
       )}
@@ -465,8 +465,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           ===================================================================== */}
       <section className="mt-12">
         <SectionHeading
-          title="ファクト別に並べ替える"
-          lead="公表データに入っている値そのもの1本で並べ替えた一覧です。複数の項目を重み付けして合成した総合ランキングや、おすすめ順・★評価は作っていません。"
+          title="公表データの項目別の並べ替え"
+          lead="公表データの単一の項目の値にもとづいて並べ替えた一覧です。複数の項目を重み付けして合成した総合ランキングや、おすすめ順・★評価は作成していません。"
         />
         <p className="note mb-3 px-4 py-3 text-sm font-bold">{NOT_A_RECOMMENDATION}</p>
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -476,7 +476,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               <li key={a.href} className="rounded-xl border border-dashed border-line-strong bg-tint px-4 py-4">
                 <span className="text-sm font-bold text-ink">{a.label}</span>
                 <span className="mt-1 block text-xs leading-relaxed text-muted">
-                  {a.basis}このページ上部の検索フォームがこの並べ替えです。
+                  {a.basis}このページ上部の検索フォームで、この順序による検索ができます。
                 </span>
               </li>
             ) : (
@@ -498,8 +498,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         <section className="mt-12">
           <SectionHeading
             icon="/img/icon-data.webp"
-            title="このサイトのデータについて"
-            lead="項目ごとに「どれだけ埋まっているか」を公開しています。欠けている項目は推測で埋めず、そのまま「記載なし」と出します。"
+            title="当サイトの掲載データについて"
+            lead="項目ごとの記載の割合（充足率）を公開しています。記載のない項目は推測で補完せず、「記載なし」と表示しています。"
           />
           <div className="card overflow-x-auto p-1">
             <table className="w-full min-w-[420px] border-collapse text-sm">
@@ -513,7 +513,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               <tbody>
                 {[
                   ["緯度・経度（距離検索に使用）", stats.withGeo],
-                  ["法人番号（法人ページの名寄せキー）", covCorpNo],
+                  ["法人番号（法人ページの同一法人判定に使用）", covCorpNo],
                   ["公式URL", covUrl],
                   ["定員（1人以上の記載）", covCapacity],
                 ].map(([label, n]) => (
@@ -527,7 +527,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             </table>
           </div>
           <p className="mt-3 text-xs">
-            <Link href="/data/" className="font-bold text-accent hover:underline">全項目の充足率と掲載方針を見る →</Link>
+            <Link href="/data/" className="font-bold text-accent hover:underline">全項目の充足率と掲載方針 →</Link>
           </p>
         </section>
       )}

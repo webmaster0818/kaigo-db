@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "サービス種別から探す",
   description:
-    "特別養護老人ホーム・介護老人保健施設・グループホーム・介護付き有料老人ホームの4種別について、制度上の位置づけと全国の掲載事業所数をまとめています。種別ごとに事業所を検索できます。",
+    "特別養護老人ホーム・介護老人保健施設・グループホーム・介護付き有料老人ホームの4種別について、制度上の位置づけと全国の掲載施設数をまとめています。種別ごとに施設を検索できます。",
   alternates: { canonical: abs("/type/") },
 };
 
@@ -26,8 +26,8 @@ export default async function TypeIndex() {
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "サービス種別から探す" }]} />
       <h1 className="mb-2">サービス種別から探す</h1>
       <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted">
-        「住まいとして選ぶ」入居系の4種別は、対象となる要介護度も、運営している主体も、費用の仕組みも違います。
-        まず種別の違いを押さえてから、エリアや距離で絞り込むと探しやすくなります。
+        住まいとして利用する入居系の4種別は、対象となる要介護度、運営主体、費用の仕組みがそれぞれ異なります。
+        種別の違いを確認したうえで、エリアや距離で絞り込むと、施設を探しやすくなります。
       </p>
 
       {types.length === 0 ? (
@@ -89,7 +89,7 @@ export default async function TypeIndex() {
                           </>
                         )}
 
-                        <span className="mt-3 text-xs font-bold text-accent">この種別の事業所を見る →</span>
+                        <span className="mt-3 text-xs font-bold text-accent">この種別の施設一覧 →</span>
                       </Link>
                     </li>
                   );

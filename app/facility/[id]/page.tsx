@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const where = [f.prefecture, f.city].filter(Boolean).join("");
   return {
     title: `${f.name}（${where}）｜${f.service_type}`,
-    description: `${where}の${f.service_type}「${f.name}」の公表情報。住所・電話番号・運営法人${f.capacity != null ? `・定員${f.capacity}人` : ""}を厚生労働省のデータから掲載しています。`,
+    description: `${where}の${f.service_type}「${f.name}」の公表情報です。住所・電話番号・運営法人${f.capacity != null ? `・定員${f.capacity}人` : ""}を、厚生労働省の公表データにもとづいて掲載しています。`,
     alternates: { canonical: abs(`/facility/${seg(f.id)}/`) },
     // 公式URLも定員も無い薄いページは noindex（lib/indexing.ts の判定を共有）
     robots: facilityRobots(f),
@@ -162,13 +162,13 @@ export default async function FacilityPage({ params }: { params: Params }) {
                 target="_blank"
                 className="ml-3 text-xs text-accent hover:underline"
               >
-                地図で見る
+                地図で表示
               </a>
               <Link
                 href={`/?lat=${f.lat}&lng=${f.lng}&radius=3&sort=distance`}
                 className="ml-3 text-xs text-accent hover:underline"
               >
-                この周辺3kmを検索
+                周辺3km以内を検索
               </Link>
             </>
           ) : (
@@ -180,7 +180,7 @@ export default async function FacilityPage({ params }: { params: Params }) {
 
       {!indexable && (
         <p className="mb-6 note px-3 py-2 text-xs text-muted">
-          この事業所は公表データに定員・公式URLの記載がないため、掲載項目が限られています
+          この施設は公表データに定員・公式URLの記載がないため、掲載している項目が限られています
           （当サイトの方針により検索エンジンには登録していません）。
         </p>
       )}
@@ -188,14 +188,14 @@ export default async function FacilityPage({ params }: { params: Params }) {
       {neighbors.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-3">
-            同じ{f.city ?? "市区町村"}の事業所
+            同じ{f.city ?? "市区町村"}の施設
             <span className="ml-2 text-xs font-normal text-muted">{neighbors.length}件</span>
           </h2>
           <FacilityTable rows={neighbors} hideCity />
           {f.pref_slug && f.city_slug && (
             <p className="mt-3 text-xs">
               <Link href={`/area/${seg(f.pref_slug)}/${seg(f.city_slug)}/`} className="text-accent hover:underline">
-                {f.prefecture}{f.city}の一覧をすべて見る →
+                {f.prefecture}{f.city}の施設一覧 →
               </Link>
             </p>
           )}

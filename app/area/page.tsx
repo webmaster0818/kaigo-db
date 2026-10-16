@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "都道府県から探す",
-  description: "全国47都道府県の介護施設・事業所を、市区町村単位で検索できます。厚生労働省の公表データに基づく掲載件数付き。",
+  description: "全国47都道府県の介護施設・事業所を、市区町村単位で検索できます。厚生労働省の公表データにもとづく掲載件数を表示しています。",
   alternates: { canonical: abs("/area/") },
 };
 
@@ -25,7 +25,7 @@ export default async function AreaIndex() {
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "都道府県から探す" }]} />
       <h1 className="mb-2">都道府県から探す</h1>
       <p className="mb-5 text-sm text-muted">
-        {total > 0 ? <>掲載 {total.toLocaleString()} 件を都道府県・市区町村で絞り込めます。</> : "データを準備しています。"}
+        {total > 0 ? <>掲載している {total.toLocaleString()} 件の施設を、都道府県・市区町村で絞り込むことができます。</> : "データを準備しております。"}
       </p>
 
       {total === 0 ? (
@@ -52,9 +52,9 @@ export default async function AreaIndex() {
 
       {/* 都道府県スラッグは lib/slug.ts の固定表で管理（例: 東京都 → tokyo） */}
       <p className="mt-6 text-xs text-muted">
-        市区町村名から直接探す場合は、都道府県ページ（例:{" "}
+        市区町村名から探す場合は、都道府県ページ（例:{" "}
         <Link href={`/area/${seg("tokyo")}/`} className="text-accent hover:underline">/area/tokyo/</Link>
-        ）を開いてください。
+        ）をご利用ください。
       </p>
 
       <SourceNote acquiredOn={meta.acquired_on} />

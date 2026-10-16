@@ -44,10 +44,10 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
   const robots = rankingRobots({ rows, filters: p.filters, unknownFilter: p.unknownFilter });
 
   return {
-    title: label ? `${label}の市区町村を施設数が多い順に並べる` : "市区町村を施設数が多い順に並べる",
+    title: label ? `${label}の市区町村｜施設数が多い順の一覧` : "市区町村｜施設数が多い順の一覧",
     description:
-      `${label ? `${label}の` : "全国の"}市区町村を、その区域内に登録されている介護事業所の件数が多い順に並べた一覧です。` +
-      "件数そのものの並びで、当サイトによる評価・推薦ではありません。",
+      `${label ? `${label}の` : "全国の"}市区町村を、その区域内に登録されている介護施設の件数が多い順に並べた一覧です。` +
+      "件数にもとづく表示順であり、当サイトによる評価・推薦を示すものではありません。",
     alternates: { canonical: abs(robots.index ? withQuery(PATH, p.query) : PATH) },
     robots,
   };
@@ -75,13 +75,13 @@ export default async function AreaDensityRanking({ searchParams }: { searchParam
           { name: label ? `市区町村あたりの施設数が多い順（${label}）` : "市区町村あたりの施設数が多い順" },
         ]}
       />
-      <h1 className="mb-3">{label ? `${label}の市区町村` : "全国の市区町村"}を施設数が多い順に並べる</h1>
+      <h1 className="mb-3">{label ? `${label}の市区町村` : "全国の市区町村"}｜施設数が多い順の一覧</h1>
 
       <RankingNote
         basis={AXIS.basis}
         extra={
           p.typeName
-            ? `${p.typeName}に限った件数で並べています。${AXIS.note}`
+            ? `${p.typeName}に限った件数で表示しています。${AXIS.note}`
             : AXIS.note
         }
       />
@@ -90,14 +90,14 @@ export default async function AreaDensityRanking({ searchParams }: { searchParam
 
       {p.unknownFilter ? (
         <p className="card px-4 py-6 text-sm text-muted">
-          指定された条件が見つかりませんでした。上の絞り込みから選び直してください。
+          指定された条件に該当するページはありません。上の絞り込みから条件を選択してください。
         </p>
       ) : rows.length === 0 ? (
         <EmptyState
           detail={
             total === 0 && p.filters === 0
-              ? "厚生労働省の公表データを準備しています。公開までしばらくお待ちください。"
-              : "この条件に該当する市区町村がありませんでした。条件を広げてお試しください。"
+              ? "厚生労働省の公表データを準備しております。公開までしばらくお待ちください。"
+              : "この条件に該当する市区町村はありません。条件を広げてお試しください。"
           }
         />
       ) : (
@@ -147,14 +147,14 @@ export default async function AreaDensityRanking({ searchParams }: { searchParam
       )}
 
       <p className="mt-6 text-xs leading-relaxed text-muted">
-        件数は当サイトに掲載している事業所の数です。市区町村の面積・人口で割った密度ではないため、
-        人口規模の大きい自治体ほど上位に並びます。近くの施設を探す場合は、
+        件数は当サイトに掲載している施設の数です。市区町村の面積・人口で割った密度ではないため、
+        人口規模の大きい自治体ほど上位に表示されます。近くの施設を探す場合は、
         <Link href="/" className="text-accent hover:underline">現在地からの距離検索</Link>
         をご利用ください。
       </p>
 
       <p className="mt-3 text-xs">
-        <Link href="/ranking/" className="text-accent hover:underline">ほかの並べ替えを見る →</Link>
+        <Link href="/ranking/" className="text-accent hover:underline">その他の並べ替え →</Link>
       </p>
 
       <SourceNote acquiredOn={meta.acquired_on} />

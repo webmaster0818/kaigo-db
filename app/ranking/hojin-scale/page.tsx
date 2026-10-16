@@ -45,10 +45,10 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
   const robots = rankingRobots({ rows, filters: p.filters, unknownFilter: p.unknownFilter });
 
   return {
-    title: label ? `${label}の運営法人を施設数が多い順に並べる` : "運営法人を施設数が多い順に並べる",
+    title: label ? `${label}の運営法人｜施設数が多い順の一覧` : "運営法人｜施設数が多い順の一覧",
     description:
-      `${label ? `${label}で` : "全国で"}同一法人が運営している介護事業所の件数が多い順に並べた一覧です。` +
-      "件数は当サイトの掲載範囲での集計値で、当サイトによる評価・推薦ではありません。",
+      `${label ? `${label}で` : "全国で"}同一法人が運営している介護施設の件数が多い順に並べた一覧です。` +
+      "件数は当サイトの掲載範囲での集計値であり、当サイトによる評価・推薦を示すものではありません。",
     alternates: { canonical: abs(robots.index ? withQuery(PATH, p.query) : PATH) },
     robots,
   };
@@ -76,13 +76,13 @@ export default async function HojinScaleRanking({ searchParams }: { searchParams
           { name: label ? `法人の運営施設数が多い順（${label}）` : "法人の運営施設数が多い順" },
         ]}
       />
-      <h1 className="mb-3">{label ? `${label}の運営法人` : "運営法人"}を施設数が多い順に並べる</h1>
+      <h1 className="mb-3">{label ? `${label}の運営法人` : "運営法人"}｜施設数が多い順の一覧</h1>
 
       <RankingNote
         basis={AXIS.basis}
         extra={
           scoped
-            ? `絞り込み中のため、件数は「${label}に限った施設数」です。法人全体の施設数は各法人のページでご確認ください。`
+            ? `条件を絞り込んでいるため、件数は${label}に限った施設数です。法人全体の施設数は、各法人のページでご確認ください。`
             : AXIS.note
         }
       />
@@ -91,14 +91,14 @@ export default async function HojinScaleRanking({ searchParams }: { searchParams
 
       {p.unknownFilter ? (
         <p className="card px-4 py-6 text-sm text-muted">
-          指定された条件が見つかりませんでした。上の絞り込みから選び直してください。
+          指定された条件に該当するページはありません。上の絞り込みから条件を選択してください。
         </p>
       ) : rows.length === 0 ? (
         <EmptyState
           detail={
             total === 0 && p.filters === 0
-              ? "厚生労働省の公表データを準備しています。公開までしばらくお待ちください。"
-              : "この条件に該当する法人がありませんでした。条件を広げてお試しください。"
+              ? "厚生労働省の公表データを準備しております。公開までしばらくお待ちください。"
+              : "この条件に該当する法人はありません。条件を広げてお試しください。"
           }
         />
       ) : (
@@ -145,12 +145,12 @@ export default async function HojinScaleRanking({ searchParams }: { searchParams
       )}
 
       <p className="mt-6 text-xs leading-relaxed text-muted">
-        法人名は出典データの表記をそのまま使っています。表記が異なる場合（法人格の有無・旧名称など）は別法人として数えるため、
-        実際の運営規模と一致しないことがあります。施設数は規模を表す数字であって、サービスの内容や質を表すものではありません。
+        法人名は出典データの表記をそのまま使用しています。表記が異なる場合（法人格の有無・旧名称など）は別法人として集計するため、
+        実際の運営規模と一致しない場合があります。施設数は規模を示す数値であり、サービスの内容や質を示すものではありません。
       </p>
 
       <p className="mt-3 text-xs">
-        <Link href="/ranking/" className="text-accent hover:underline">ほかの並べ替えを見る →</Link>
+        <Link href="/ranking/" className="text-accent hover:underline">その他の並べ替え →</Link>
       </p>
 
       <SourceNote acquiredOn={meta.acquired_on} />

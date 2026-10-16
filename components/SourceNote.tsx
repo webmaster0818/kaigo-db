@@ -19,7 +19,7 @@ export default function SourceNote({ acquiredOn }: { acquiredOn?: string | null 
       ）
       {acquiredOn ? `／取得日 ${acquiredOn}` : "／取得日 記載なし"}
       <br />
-      本サイトは公表データをそのまま掲載しています。空欄の項目は「記載なし」と表示し、推測値では補っていません。
+      当サイトは公表データをそのまま掲載しています。記載のない項目は「記載なし」と表示し、推測値による補完は行っていません。
     </p>
   );
 }

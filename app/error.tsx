@@ -7,11 +7,11 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
   return (
     <main>
       <meta name="robots" content="noindex" />
-      <h1 className="mb-2">ただいま表示できません</h1>
+      <h1 className="mb-2">現在、ページを表示できません</h1>
       <div className="rounded border border-dashed border-line-strong bg-surface px-4 py-10 text-center">
         <p className="text-sm font-bold text-ink">データベースに一時的に接続できませんでした</p>
         <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted">
-          時間をおいて、もう一度お試しください。
+          しばらく時間をおいてから、再度お試しください。
         </p>
         <button
           type="button"

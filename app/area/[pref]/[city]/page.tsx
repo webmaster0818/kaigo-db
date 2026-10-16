@@ -17,9 +17,9 @@ const LIST_LIMIT = 300;
 
 /** 並べ替えの根拠。表示している順番が何に基づくのかを必ず書く。 */
 const SORT_BASIS: Record<CitySort, string> = {
-  default: "住まい（入居系）を先に、次にサービス種別名・事業所名の五十音順で並べています。",
-  capacity: "厚生労働省の公表データの「定員」の値が大きい順に並べています（定員の記載がない施設は末尾です）。",
-  name: "事業所名の順に並べています。",
+  default: "住まい（入居系）を先に、次にサービス種別名・事業所名の五十音順で表示しています。",
+  capacity: "厚生労働省の公表データの「定員」の値が大きい順に表示しています（定員の記載がない施設は末尾に表示しています）。",
+  name: "事業所名の順に表示しています。",
 };
 
 type Params = Promise<{ pref: string; city: string }>;
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const n = area?.facility_count ?? 0;
   return {
     title: `${prefName}${cityName}の介護施設・事業所一覧`,
-    description: `${prefName}${cityName}の介護施設・事業所${n > 0 ? `${n.toLocaleString()}件` : ""}の一覧。事業所名・サービス種別・定員・運営法人・公式URLを厚生労働省の公表データから掲載しています。`,
+    description: `${prefName}${cityName}の介護施設・事業所${n > 0 ? `${n.toLocaleString()}件` : ""}の一覧です。事業所名・サービス種別・定員・運営法人・公式URLを、厚生労働省の公表データにもとづいて掲載しています。`,
     alternates: { canonical: abs(`/area/${seg(pref)}/${seg(city)}/`) },
     robots: listRobots(n),
   };
@@ -89,12 +89,12 @@ export default async function CityPage({
       <h1 className="mb-3">{prefName}{cityName}の介護施設・事業所</h1>
 
       {rows.length === 0 ? (
-        <EmptyState detail={`${prefName}${cityName}のデータはまだ投入されていません。公開までしばらくお待ちください。`} />
+        <EmptyState detail={`${prefName}${cityName}のデータは現在掲載しておりません。公開までしばらくお待ちください。`} />
       ) : (
         <>
           <dl className="mb-5 flex flex-wrap gap-x-8 gap-y-2 border-y border-line py-3 text-sm">
             <div>
-              <dt className="text-xs text-muted">掲載事業所</dt>
+              <dt className="text-xs text-muted">掲載施設</dt>
               <dd className="tabular-nums text-lg font-bold">{(area?.facility_count ?? rows.length).toLocaleString()}</dd>
             </div>
             <div>
@@ -140,7 +140,7 @@ export default async function CityPage({
               並べ替える
             </button>
             <span className="text-xs text-muted">
-              近い順で探すには
+              近い順で探す場合は、
               <Link href="/" className="ml-1 text-accent hover:underline">現在地からの距離検索</Link>
               をご利用ください。
             </span>
@@ -154,12 +154,12 @@ export default async function CityPage({
 
           {(area?.facility_count ?? 0) > LIST_LIMIT && (
             <p className="mt-3 text-xs text-muted">
-              件数が多いため先頭{LIST_LIMIT.toLocaleString()}件を表示しています。
+              件数が多いため、先頭の{LIST_LIMIT.toLocaleString()}件を表示しています。
             </p>
           )}
 
           <p className="mt-4 text-xs text-muted">
-            定員・公式URLが「{NO_DATA}」の事業所は、出典データに値が無いものです（当サイトで推定した数値は一切ありません）。
+            定員・公式URLが「{NO_DATA}」の施設は、出典データに記載がないものです（当サイトで推定した数値は掲載していません）。
           </p>
         </>
       )}

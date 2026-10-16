@@ -822,11 +822,11 @@ function coverageFromRow(row: Record<string, number> | undefined): { total: numb
     { key: "latlng", label: "緯度・経度", filled: Number(row?.f_latlng ?? 0) },
     { key: "tel", label: "電話番号", filled: Number(row?.f_tel ?? 0) },
     { key: "corp", label: "法人名", filled: Number(row?.f_corp ?? 0) },
-    { key: "corpno", label: "法人番号（法人ページの名寄せキー）", filled: Number(row?.f_corpno ?? 0) },
+    { key: "corpno", label: "法人番号（法人ページの同一法人判定に使用）", filled: Number(row?.f_corpno ?? 0) },
     { key: "capacity", label: "定員（1人以上の記載）", filled: Number(row?.f_capacity ?? 0) },
     { key: "days", label: "利用可能曜日", filled: Number(row?.f_days ?? 0) },
     { key: "url", label: "公式URL", filled: Number(row?.f_url ?? 0) },
-    { key: "indexable", label: "（参考）index対象＝公式URLか定員あり", filled: Number(row?.f_indexable ?? 0) },
+    { key: "indexable", label: "（参考）検索エンジンへの登録対象（公式URLまたは定員の記載あり）", filled: Number(row?.f_indexable ?? 0) },
   ];
   return { total, fields };
 }

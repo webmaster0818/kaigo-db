@@ -99,14 +99,14 @@ export default function PlaceSearchForm({
           type="submit"
           className="btn-primary px-7 py-2.5 text-sm"
         >
-          近い順に探す
+          近い順に検索
         </button>
         <button
           type="button"
           onClick={locate}
           className="rounded-full border border-line-strong px-4 py-2.5 text-xs hover:bg-tint"
         >
-          現在地を使う
+          現在地を使用
         </button>
         {lat && lng && (
           <span className="text-xs tabular-nums text-muted">現在地 {lat}, {lng}</span>
@@ -115,8 +115,8 @@ export default function PlaceSearchForm({
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-muted">
-        入力した地名は、掲載施設の緯度・経度から作った地名辞書で座標に変換しています（外部の地図サービスは使っていません）。
-        駅名を入れた場合は、同じ名前の地名の位置で検索します（駅の座標そのものは持っていません）。
+        入力した地名は、掲載施設の緯度・経度から作成した地名辞書により座標に変換しています（外部の地図サービスは使用していません）。
+        駅名を入力した場合は、同じ名称の地名の位置で検索します（駅の座標は保有していません）。
       </p>
     </form>
   );

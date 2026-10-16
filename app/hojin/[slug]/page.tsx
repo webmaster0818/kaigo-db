@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (!c) return { title: "法人が見つかりません", robots: { index: false, follow: true } };
   return {
     title: `${c.name}が運営する介護事業所一覧`,
-    description: `${c.name}が運営する介護事業所${c.facility_count.toLocaleString()}件の一覧。所在地・サービス種別・定員を厚生労働省の公表データから掲載しています。`,
+    description: `${c.name}が運営する介護事業所${c.facility_count.toLocaleString()}件の一覧です。所在地・サービス種別・定員を、厚生労働省の公表データにもとづいて掲載しています。`,
     alternates: { canonical: abs(`/hojin/${seg(slug)}/`) },
     robots: listRobots(c.facility_count),
   };
@@ -53,7 +53,7 @@ export default async function HojinPage({ params }: { params: Params }) {
 
       <dl className="mb-5 flex flex-wrap gap-x-8 gap-y-2 border-y border-line py-3 text-sm">
         <div>
-          <dt className="text-xs text-muted">事業所数</dt>
+          <dt className="text-xs text-muted">施設数</dt>
           <dd className="tabular-nums text-lg font-bold">{c.facility_count.toLocaleString()}</dd>
         </div>
         <div>
@@ -79,15 +79,15 @@ export default async function HojinPage({ params }: { params: Params }) {
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-muted">
-        このページは法人名ではなく<strong>法人番号（{c.corporate_number}）</strong>で事業所をまとめています。
-        同名の別法人は別のページになり、表記が揺れている同一法人は1ページにまとまります。
+        このページでは、法人名ではなく<strong>法人番号（{c.corporate_number}）</strong>にもとづいて施設をまとめています。
+        同名の別法人は別のページに掲載し、表記の異なる同一法人は1ページにまとめて掲載しています。
         {c.name_variants > 1 && (
           <>
             {" "}出典データではこの法人の名称が{c.name_variants}通りの表記で登録されていたため、
-            最も多く使われていた表記を見出しに採用しています。
+            最も多く使用されていた表記を見出しに採用しています。
           </>
         )}
-        {" "}法人番号の記載がない事業所（掲載全体の約1.7%）は、どの法人ページにも含まれません。
+        {" "}法人番号の記載がない施設（掲載全体の約1.7%）は、いずれの法人ページにも含まれません。
       </p>
 
       <SourceNote acquiredOn={meta.acquired_on} />

@@ -22,8 +22,8 @@ export default function Footer() {
           <a href={LICENSE_URL} rel="license noopener noreferrer" target="_blank" className="underline hover:text-accent">
             {LICENSE_NAME}
           </a>
-          ）に基づきます。口コミ・独自評価・ランキングは掲載していません。
-          最新の状況は各事業所へ直接ご確認ください。
+          ）にもとづいています。口コミ・独自の評価・ランキングは掲載していません。
+          ご利用前に、各施設に最新の状況をご確認ください。
         </p>
         <p className="mt-3 text-muted-2">© {new Date().getFullYear()} {SITE_NAME}</p>
       </div>
