@@ -12,6 +12,11 @@ export const dynamic = "force-dynamic";
 // いずれも cachedAgg で6時間キャッシュされるので、当たれば0行。
 const FACILITY_LIMIT = 45000;
 
+// 一覧・TOP系のテンプレートを最後に書き換えた日（10/16 文言改稿）。
+// /ranking/・/area/tokyo/ などが、D1を読めず noindex を返していた 9/30〜10/10 のクロール結果のまま残っているため、
+// 変更日を示して再クロールを促す（施設・法人の個別ページには付けない）。
+const LIST_LASTMOD = "2026-10-16";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [types, areas, facilities, total] = await Promise.all([
     queries.typeCounts(),
@@ -28,21 +33,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const rankingEntries: MetadataRoute.Sitemap =
     total > 0
       ? [
-          { url: abs("/ranking/"), priority: 0.6 },
-          ...RANKING_AXES.filter((a) => a.inSitemap).map((a) => ({ url: abs(a.href), priority: 0.6 })),
+          { url: abs("/ranking/"), lastModified: LIST_LASTMOD, priority: 0.6 },
+          ...RANKING_AXES.filter((a) => a.inSitemap).map((a) => ({ url: abs(a.href), lastModified: LIST_LASTMOD, priority: 0.6 })),
         ]
       : [];
 
   const entries: MetadataRoute.Sitemap = [
-    { url: abs("/"), priority: 1 },
-    { url: abs("/area/"), priority: 0.8 },
-    { url: abs("/type/"), priority: 0.8 },
-    { url: abs("/hojin/"), priority: 0.6 },
-    { url: abs("/data/"), priority: 0.5 },
+    { url: abs("/"), lastModified: LIST_LASTMOD, priority: 1 },
+    { url: abs("/area/"), lastModified: LIST_LASTMOD, priority: 0.8 },
+    { url: abs("/type/"), lastModified: LIST_LASTMOD, priority: 0.8 },
+    { url: abs("/hojin/"), lastModified: LIST_LASTMOD, priority: 0.6 },
+    { url: abs("/data/"), lastModified: LIST_LASTMOD, priority: 0.5 },
     ...rankingEntries,
-    ...prefSlugs.map((p) => ({ url: abs(`/area/${seg(p)}/`), priority: 0.7 })),
+    ...prefSlugs.map((p) => ({ url: abs(`/area/${seg(p)}/`), lastModified: LIST_LASTMOD, priority: 0.7 })),
     ...areas.map(([p, c]) => ({ url: abs(`/area/${seg(p)}/${seg(c)}/`), priority: 0.7 })),
-    ...types.map((t) => ({ url: abs(`/type/${seg(t.service_type_slug)}/`), priority: 0.7 })),
+    ...types.map((t) => ({ url: abs(`/type/${seg(t.service_type_slug)}/`), lastModified: LIST_LASTMOD, priority: 0.7 })),
     ...facilities.map((f) => ({ url: abs(`/facility/${seg(f.id)}/`), priority: 0.5 })),
   ];
 
