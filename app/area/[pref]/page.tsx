@@ -20,8 +20,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const prefName = cities[0]?.prefecture ?? SLUG_TO_PREF[pref] ?? pref;
   const total = cities.reduce((s, c) => s + c.facility_count, 0);
   return {
-    title: `${prefName}の介護施設・事業所一覧`,
-    description: `${prefName}の介護施設・事業所${total > 0 ? ` ${total.toLocaleString()}件` : ""}を市区町村別に掲載しています。厚生労働省の公表データにもとづく事業所名・住所・定員・公式URLを確認できます。`,
+    // 掲載は入居系4種別のみ（47都道府県すべてに4種別とも掲載あり＝2026-10-19 /type/* の都道府県別内訳で確認）
+    title: `${prefName}の介護施設一覧｜特養・老健・有料老人ホーム・グループホーム`,
+    description: `${prefName}の介護施設${total > 0 ? ` ${total.toLocaleString()}件` : ""}（特別養護老人ホーム・介護老人保健施設・有料老人ホーム・グループホーム）を市区町村別に掲載しています。厚生労働省 介護サービス情報公表システムの公表データにもとづき、施設名・住所・定員・公式URLを確認できます。`,
     alternates: { canonical: abs(`/area/${seg(pref)}/`) },
     robots: listRobots(total),
   };
