@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "kaigo-db",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts", // .open-next/worker.js の前段（bot の距離検索を弾く）
   "compatibility_date": "2026-05-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {

@@ -166,6 +166,8 @@ export default async function FacilityPage({ params }: { params: Params }) {
               </a>
               <Link
                 href={`/?lat=${f.lat}&lng=${f.lng}&radius=3&sort=distance`}
+                // 検索結果は robots.txt で除外している。クローラーに辿らせない（worker.ts でも bot には返さない）
+                rel="nofollow"
                 className="ml-3 text-xs text-accent hover:underline"
               >
                 周辺3km以内を検索

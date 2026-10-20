@@ -232,6 +232,14 @@ async function safeGet<T>(sql: string, params: unknown[] = []): Promise<T | unde
 
 const AGG_TTL_SEC = 6 * 60 * 60;
 const memo = new Map<string, { at: number; value: unknown }>();
+// 市区町村ごとの施設一覧（sameCity:*）も載るので、isolate のメモリを食い過ぎないよう件数に上限を掛ける。
+// Map は挿入順なので、溢れたら古いものから捨てる（Cache API 側には残る）。
+const MEMO_MAX = 400;
+function memoSet(key: string, entry: { at: number; value: unknown }): void {
+  memo.delete(key);
+  memo.set(key, entry);
+  while (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value as string);
+}
 
 function isEmptyResult(v: unknown): boolean {
   if (v == null) return true;
@@ -264,7 +272,7 @@ async function cachedAgg<T>(key: string, fn: () => Promise<T>, isEmpty: (v: T) =
         const at = Number(hit.headers.get(AGG_AT_HEADER)) || now;
         const value = (await hit.json()) as T;
         if (now - at < AGG_TTL_SEC * 1000) {
-          memo.set(key, { at, value });
+          memoSet(key, { at, value });
           return value;
         }
         stale = { value };
@@ -286,7 +294,7 @@ async function cachedAgg<T>(key: string, fn: () => Promise<T>, isEmpty: (v: T) =
   }
   if (isEmpty(value) && stale) return stale.value;
   if (!isEmpty(value)) {
-    memo.set(key, { at: now, value });
+    memoSet(key, { at: now, value });
     if (req && cacheStore) {
       try {
         await cacheStore.put(
@@ -385,11 +393,14 @@ export function toCitySort(v: string | undefined): CitySort {
 
 export const queries = {
   // ---- meta ----
+  // 出典・取得日などで、load のときしか変わらない。ほぼ全ページが読むので cachedAgg で包む（10/19 で1.8万回）。
   async meta(): Promise<Record<string, string>> {
-    const rows = await safeAll<{ key: string; value: string | null }>("SELECT key, value FROM meta", []);
-    const out: Record<string, string> = {};
-    for (const r of rows) if (r.value != null) out[r.key] = r.value;
-    return out;
+    return cachedAgg("meta", async () => {
+      const rows = await safeAll<{ key: string; value: string | null }>("SELECT key, value FROM meta", []);
+      const out: Record<string, string> = {};
+      for (const r of rows) if (r.value != null) out[r.key] = r.value;
+      return out;
+    }, (v) => Object.keys(v).length === 0);
   },
 
   async totalCount(): Promise<number> {
@@ -403,13 +414,19 @@ export const queries = {
   },
 
   /** 同一市区町村の近隣施設（施設ページの内部リンク用） */
+  // 施設ページごとに市区町村の全施設を並べ替えて読んでいた（1回平均95行・10/19 で約54万行）。
+  // 市区町村ごとの先頭 limit+1 件を cachedAgg でキャッシュし、自施設は JS 側で除く。
+  // 先頭 limit+1 件から自施設を除いて limit 件取れば、SQL で id <> ? を付けた結果と同じになる。
   async facilitiesInSameCity(prefSlug: string, citySlug: string, excludeId: string, limit = 20): Promise<Facility[]> {
-    return safeAll<Facility>(
-      `SELECT ${FACILITY_COLS} FROM facility
-       WHERE pref_slug = ? AND city_slug = ? AND id <> ?
-       ORDER BY is_indexable DESC, name LIMIT ?`,
-      [prefSlug, citySlug, excludeId, limit],
+    const rows = await cachedAgg(`sameCity:${prefSlug}/${citySlug}/${limit + 1}`, () =>
+      safeAll<Facility>(
+        `SELECT ${FACILITY_COLS} FROM facility
+         WHERE pref_slug = ? AND city_slug = ?
+         ORDER BY is_indexable DESC, name LIMIT ?`,
+        [prefSlug, citySlug, limit + 1],
+      ),
     );
+    return rows.filter((r) => r.id !== excludeId).slice(0, limit);
   },
 
   // ---- エリア ----
