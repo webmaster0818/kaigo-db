@@ -239,10 +239,18 @@ function isEmptyResult(v: unknown): boolean {
   return false;
 }
 
+// 6時間を過ぎた値も、D1 が読めないとき（無料枠の読み取り上限超過など）の代わりとして残しておく期間。
+// 2026-10-19 19時台(JST)に D1 が上限に達し、翌09:00 のリセットまで、キャッシュの切れた
+// /sitemap.xml が 5xx を返していた（07:00 の機械点検で「取得できない」）。値は load 時にしか変わらないので、
+// 古い値を返しても実害は小さい。
+const AGG_STALE_SEC = 7 * 24 * 60 * 60;
+const AGG_AT_HEADER = "x-agg-at";
+
 async function cachedAgg<T>(key: string, fn: () => Promise<T>, isEmpty: (v: T) => boolean = isEmptyResult): Promise<T> {
   const now = Date.now();
   const m = memo.get(key);
   if (m && now - m.at < AGG_TTL_SEC * 1000) return m.value as T;
+  let stale: { value: T } | undefined = m ? { value: m.value as T } : undefined;
 
   // Cache API は Workers 上でのみ使う（開発機の Node では素通り）
   const cacheStore = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
@@ -252,16 +260,31 @@ async function cachedAgg<T>(key: string, fn: () => Promise<T>, isEmpty: (v: T) =
     try {
       const hit = await cacheStore.match(req);
       if (hit) {
+        // 書いた時刻が無い＝旧形式（max-age 6時間で書いたもの）なので新しいものとして扱う
+        const at = Number(hit.headers.get(AGG_AT_HEADER)) || now;
         const value = (await hit.json()) as T;
-        memo.set(key, { at: now, value });
-        return value;
+        if (now - at < AGG_TTL_SEC * 1000) {
+          memo.set(key, { at, value });
+          return value;
+        }
+        stale = { value };
       }
     } catch {
       // キャッシュの不調は無視してDBを読む
     }
   }
 
-  const value = await fn();
+  let value: T;
+  try {
+    value = await fn();
+  } catch (e) {
+    if (stale) {
+      console.warn(`[db] agg '${key}' を更新できないため古い値を返します:`, (e as Error).message);
+      return stale.value;
+    }
+    throw e;
+  }
+  if (isEmpty(value) && stale) return stale.value;
   if (!isEmpty(value)) {
     memo.set(key, { at: now, value });
     if (req && cacheStore) {
@@ -269,7 +292,11 @@ async function cachedAgg<T>(key: string, fn: () => Promise<T>, isEmpty: (v: T) =
         await cacheStore.put(
           req,
           new Response(JSON.stringify(value), {
-            headers: { "content-type": "application/json", "cache-control": `public, max-age=${AGG_TTL_SEC}` },
+            headers: {
+              "content-type": "application/json",
+              "cache-control": `public, max-age=${AGG_STALE_SEC}`,
+              [AGG_AT_HEADER]: String(now),
+            },
           }),
         );
       } catch {
