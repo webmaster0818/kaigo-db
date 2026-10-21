@@ -490,11 +490,17 @@ export const queries = {
     return (await queries.typeCounts()).find((t) => t.service_type_slug === slug);
   },
 
+  // 種別の全施設（最大約4.7万行）を並べ替えて先頭100件を返すため、1回で平均2.2万行を読む
+  // （2026-10-20 は32回で約72万行）。値は load 時にしか変わらないので cachedAgg で包む。
+  // 存在しない種別は数えるまでもなく0件（任意の文字列でキャッシュを増やさない）。
   async facilitiesByType(slug: string, limit = 100, offset = 0): Promise<Facility[]> {
-    return safeAll<Facility>(
-      `SELECT ${FACILITY_COLS} FROM facility WHERE service_type_slug = ?
-       ORDER BY is_indexable DESC, prefecture, city, name LIMIT ? OFFSET ?`,
-      [slug, limit, offset],
+    if (!(await queries.typeBySlug(slug))) return [];
+    return cachedAgg(`typeList:${slug}/${limit}/${offset}`, () =>
+      safeAll<Facility>(
+        `SELECT ${FACILITY_COLS} FROM facility WHERE service_type_slug = ?
+         ORDER BY is_indexable DESC, prefecture, city, name LIMIT ? OFFSET ?`,
+        [slug, limit, offset],
+      ),
     );
   },
 
@@ -543,27 +549,34 @@ export const queries = {
    * 定員が NULL / 0 以下の行は対象から外す（順位に含めない）。
    * 「定員が少ない」のではなく「記載が無い」だけなので、下位に並べることもしない。
    */
+  // 絞り込みなしだと1回で約4.7万行を読む（2026-10-20 23時台 UTC に2回で約9.5万行）。
+  // 絞り込みは呼び出し側（parseRankingParams）で既知の都道府県・種別に限っているので、条件ごとに cachedAgg で包む。
   async facilitiesByCapacity(f: RankingFilter = {}, limit = 100, offset = 0): Promise<Facility[]> {
     const w = rankFilter(f);
-    return safeAll<Facility>(
-      `SELECT ${FACILITY_COLS} FROM facility
-       WHERE ${CAPACITY_OK_SQL}${w.sql}
-       ORDER BY capacity DESC, name ASC, id ASC
-       LIMIT ? OFFSET ?`,
-      [...w.params, limit, offset],
+    return cachedAgg(`rankCapacity:${f.prefSlug ?? ""}/${f.typeSlug ?? ""}/${limit}/${offset}`, () =>
+      safeAll<Facility>(
+        `SELECT ${FACILITY_COLS} FROM facility
+         WHERE ${CAPACITY_OK_SQL}${w.sql}
+         ORDER BY capacity DESC, name ASC, id ASC
+         LIMIT ? OFFSET ?`,
+        [...w.params, limit, offset],
+      ),
     );
   },
 
   /** 定員の記載率（絞り込み条件の中での実測値） */
   async capacityStats(f: RankingFilter = {}): Promise<{ total: number; with_capacity: number }> {
+    // 絞り込みなしだと facility 全件（約3.1万行）を数える。条件ごとに cachedAgg で包む（0件はキャッシュしない）
     const w = rankFilter(f);
-    const r = await safeGet<{ total: number; with_capacity: number }>(
-      `SELECT COUNT(*) AS total,
-              SUM(CASE WHEN ${CAPACITY_OK_SQL} THEN 1 ELSE 0 END) AS with_capacity
-       FROM facility WHERE 1 = 1${w.sql}`,
-      w.params,
-    );
-    return { total: Number(r?.total ?? 0), with_capacity: Number(r?.with_capacity ?? 0) };
+    return cachedAgg(`capacityStats:${f.prefSlug ?? ""}/${f.typeSlug ?? ""}`, async () => {
+      const r = await safeGet<{ total: number; with_capacity: number }>(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN ${CAPACITY_OK_SQL} THEN 1 ELSE 0 END) AS with_capacity
+         FROM facility WHERE 1 = 1${w.sql}`,
+        w.params,
+      );
+      return { total: Number(r?.total ?? 0), with_capacity: Number(r?.with_capacity ?? 0) };
+    }, (v) => !(v.total > 0));
   },
 
   /**
