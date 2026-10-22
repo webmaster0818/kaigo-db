@@ -80,6 +80,8 @@ CREATE INDEX idx_facility_type       ON facility(service_type_slug);
 CREATE INDEX idx_facility_type_city  ON facility(service_type_slug, pref_slug, city_slug);
 CREATE INDEX idx_facility_name       ON facility(name);
 CREATE INDEX idx_facility_no         ON facility(jigyosho_no);
+-- 定員ランキング（ORDER BY capacity DESC）用。無いと1回で約4.7万行を読む（2026-10-22 追加・本番にも作成済み）
+CREATE INDEX idx_facility_capacity   ON facility(capacity);
 
 -- ---------------------------------------------------------------------------
 -- corporation: 運営法人
