@@ -14,6 +14,16 @@ export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-nex
 
 const BOT_UA = /bot|crawl|spider|slurp|meta-externalagent|facebookexternalhit|bytespider|petalbot|ahrefs|semrush|dataforseo/i;
 
+// 2026-10-21 15時(UTC)以降、Alibaba Cloud（AS45102・シンガポール）から、普通のブラウザを名乗る UA と
+// 「referer: https://www.google.com/」付きで /?lat= が1日約1,500回叩かれ、D1 の近傍検索だけで約68万行
+// （日次上限の約14%）を読んでいた（10/22 の tail で /?lat= 22件すべてがこの ASN）。UA では見分けられないので、
+// 人が使うことのないクラウド事業者の ASN からの検索も、bot と同じ 403 にする。施設ページなどは今までどおり返す。
+const CLOUD_ASN = new Set<number>([
+  45102, 37963, // Alibaba Cloud
+  132203, 45090, // Tencent Cloud
+  136907, 55990, // Huawei Cloud
+]);
+
 function isSearchRequest(url: URL): boolean {
   if (url.pathname !== "/") return false;
   const p = url.searchParams;
@@ -23,7 +33,8 @@ function isSearchRequest(url: URL): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown): Promise<Response> {
     const url = new URL(request.url);
-    if (isSearchRequest(url) && BOT_UA.test(request.headers.get("user-agent") ?? "")) {
+    const asn = Number((request as unknown as { cf?: { asn?: number } }).cf?.asn ?? 0);
+    if (isSearchRequest(url) && (BOT_UA.test(request.headers.get("user-agent") ?? "") || CLOUD_ASN.has(asn))) {
       return new Response("Search results are not available to crawlers (see /robots.txt).\n", {
         status: 403,
         headers: {

@@ -438,10 +438,14 @@ export const queries = {
     ));
   },
 
+  // 都道府県ページ・施設ページなどで毎回読んでいた（2026-10-21 は1,549回・約16万行）。
+  // area は load 時にしか変わらないので cachedAgg で包む（0件はキャッシュしない）。
   async citiesByPref(prefSlug: string): Promise<AreaRow[]> {
-    return safeAll<AreaRow>(
-      "SELECT pref_slug, prefecture, city_slug, city, facility_count FROM area WHERE pref_slug = ? ORDER BY facility_count DESC, city",
-      [prefSlug],
+    return cachedAgg(`citiesByPref:${prefSlug}`, () =>
+      safeAll<AreaRow>(
+        "SELECT pref_slug, prefecture, city_slug, city, facility_count FROM area WHERE pref_slug = ? ORDER BY facility_count DESC, city",
+        [prefSlug],
+      ),
     );
   },
 
@@ -532,10 +536,13 @@ export const queries = {
     );
   },
 
+  // 2026-10-21 は2,222回・約4.7万行。corporation は load 時にしか変わらないので cachedAgg で包む。
   async topCorporations(limit = 20): Promise<Corporation[]> {
-    return safeAll<Corporation>(
-      `SELECT ${CORP_COLS} FROM corporation ORDER BY facility_count DESC, name LIMIT ?`,
-      [limit],
+    return cachedAgg(`topCorporations:${limit}`, () =>
+      safeAll<Corporation>(
+        `SELECT ${CORP_COLS} FROM corporation ORDER BY facility_count DESC, name LIMIT ?`,
+        [limit],
+      ),
     );
   },
 
@@ -610,8 +617,11 @@ export const queries = {
   /** 上の並びの総行数（「全N件のうち先頭M件」表示用） */
   async corporationScaleCount(f: RankingFilter = {}): Promise<number> {
     if (!f.prefSlug && !f.typeSlug) {
-      const r = await safeGet<{ n: number }>("SELECT COUNT(*) AS n FROM corporation WHERE facility_count > 0", []);
-      return Number(r?.n ?? 0);
+      // 1回で corporation 全件（約1.4万行）を数える。0件はキャッシュしない
+      return cachedAgg("corporationScaleCount", async () => {
+        const r = await safeGet<{ n: number }>("SELECT COUNT(*) AS n FROM corporation WHERE facility_count > 0", []);
+        return Number(r?.n ?? 0);
+      }, (n) => !n);
     }
     const w = rankFilter(f);
     const r = await safeGet<{ n: number }>(
