@@ -30,8 +30,67 @@ function isSearchRequest(url: URL): boolean {
   return p.has("lat") || p.has("lng") || p.has("q");
 }
 
+// ---------------------------------------------------------------------------
+// 描画済み HTML のキャッシュ（Cache API・データセンターごと・無料）
+// ---------------------------------------------------------------------------
+// Next の描画（RSC → HTML）は1回あたり CPU 20〜60ms かかり、無料プランの上限（10ms）を超えた分が
+// exceededCpu（503）になっていた（10/22 で全体の約4.6%）。表示内容は load（データ投入）と
+// デプロイのときしか変わらないので、同じ URL の2回目以降は描画せずに保存済みの HTML を返す。
+// - 対象：GET/HEAD・RSC 以外（ブラウザ内遷移の ?_rsc= は対象外）・トップの検索（?lat/lng/q）以外・200 の HTML のみ。
+// - キーにデプロイのバージョン ID を入れる（デプロイすると古い HTML は使われない）。データを load したら ship すること。
+// - D1 障害時の画面（error.tsx）や Set-Cookie 付きは保存しない。
+// - 返す HTML・ヘッダーは描画したときと同じ（cache-control も元の値に戻す）。x-html-cache だけ足す。
+const HTML_TTL_SEC = 7 * 24 * 3600;
+const ERROR_MARKER = "データベースに一時的に接続できませんでした";
+
+interface Env {
+  CF_VERSION_METADATA?: { id?: string };
+}
+interface Ctx {
+  waitUntil(p: Promise<unknown>): void;
+}
+
+function htmlCacheKey(request: Request, url: URL, env: Env): Request | null {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const h = request.headers;
+  if (h.has("rsc") || h.has("next-router-state-tree") || h.has("next-router-prefetch") || h.has("next-router-segment-prefetch")) return null;
+  if (url.searchParams.has("_rsc") || isSearchRequest(url)) return null;
+  if (url.pathname.startsWith("/_next/") || /\.[a-z0-9]+$/i.test(url.pathname)) return null; // 静的ファイル・sitemap.xml 等
+  const k = new URL(url.toString());
+  k.protocol = "https:"; // http と https で同じ HTML（canonical は常に https）
+  k.searchParams.set("__v", env.CF_VERSION_METADATA?.id ?? "dev");
+  return new Request(k.toString(), { method: "GET" });
+}
+
+async function storeHtml(cache: Cache, key: Request, res: Response): Promise<void> {
+  const body = await res.text();
+  if (body.includes(ERROR_MARKER)) return;
+  const headers = new Headers(res.headers);
+  headers.set("x-orig-cache-control", res.headers.get("cache-control") ?? "");
+  headers.set("cache-control", `public, max-age=${HTML_TTL_SEC}`);
+  // キーで RSC を除外済み。Cache API に Vary を解釈させないよう、元の値は別名で保存して返すときに戻す
+  headers.set("x-orig-vary", res.headers.get("vary") ?? "");
+  headers.delete("vary");
+  await cache.put(key, new Response(body, { status: 200, headers }));
+}
+
+function fromCache(hit: Response, isHead: boolean): Response {
+  const headers = new Headers(hit.headers);
+  const cc = headers.get("x-orig-cache-control");
+  const vary = headers.get("x-orig-vary");
+  headers.delete("x-orig-cache-control");
+  headers.delete("x-orig-vary");
+  if (cc) headers.set("cache-control", cc);
+  else headers.delete("cache-control");
+  if (vary) headers.set("vary", vary);
+  headers.delete("age");
+  headers.delete("cf-cache-status");
+  headers.set("x-html-cache", "HIT");
+  return new Response(isHead ? null : hit.body, { status: 200, headers });
+}
+
 export default {
-  async fetch(request: Request, env: unknown, ctx: unknown): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
     const asn = Number((request as unknown as { cf?: { asn?: number } }).cf?.asn ?? 0);
     if (isSearchRequest(url) && (BOT_UA.test(request.headers.get("user-agent") ?? "") || CLOUD_ASN.has(asn))) {
@@ -44,6 +103,22 @@ export default {
         },
       });
     }
-    return handler.fetch(request, env, ctx);
+    const key = htmlCacheKey(request, url, env);
+    if (!key) return handler.fetch(request, env, ctx);
+
+    const cache = (caches as unknown as { default: Cache }).default;
+    try {
+      const hit = await cache.match(key);
+      if (hit) return fromCache(hit, request.method === "HEAD");
+    } catch {
+      // Cache API が使えなくても描画して返す
+    }
+
+    const res: Response = await handler.fetch(request, env, ctx);
+    const ct = res.headers.get("content-type") ?? "";
+    if (request.method === "GET" && res.status === 200 && ct.startsWith("text/html") && !res.headers.has("set-cookie")) {
+      ctx.waitUntil(storeHtml(cache, key, res.clone()).catch(() => {}));
+    }
+    return res;
   },
 };

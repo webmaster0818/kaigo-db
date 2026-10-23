@@ -7,6 +7,7 @@
 
 import type { D1Database } from "@cloudflare/workers-types";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { cache } from "react";
 import { bboxWhere, withinRadius, type LatLng } from "./geo";
 import { placeKey } from "./slug";
 import { SITE_URL } from "./site";
@@ -409,9 +410,10 @@ export const queries = {
   },
 
   // ---- 施設 ----
-  async facilityById(id: string): Promise<Facility | undefined> {
+  // generateMetadata とページ本体の両方が呼ぶので、React の cache() で1リクエスト1回にまとめる。
+  facilityById: cache(async (id: string): Promise<Facility | undefined> => {
     return safeGet<Facility>(`SELECT ${FACILITY_COLS} FROM facility WHERE id = ?`, [id]);
-  },
+  }),
 
   /** 同一市区町村の近隣施設（施設ページの内部リンク用） */
   // 施設ページごとに市区町村の全施設を並べ替えて読んでいた（1回平均95行・10/19 で約54万行）。
@@ -449,12 +451,13 @@ export const queries = {
     );
   },
 
-  async area(prefSlug: string, citySlug: string): Promise<AreaRow | undefined> {
+  // generateMetadata とページ本体の重複を1回にまとめる（facilityById と同じ）。
+  area: cache(async (prefSlug: string, citySlug: string): Promise<AreaRow | undefined> => {
     return safeGet<AreaRow>(
       "SELECT pref_slug, prefecture, city_slug, city, facility_count FROM area WHERE pref_slug = ? AND city_slug = ?",
       [prefSlug, citySlug],
     );
-  },
+  }),
 
   async facilitiesByCity(
     prefSlug: string,
@@ -524,9 +527,10 @@ export const queries = {
   },
 
   // ---- 法人 ----
-  async corporationBySlug(slug: string): Promise<Corporation | undefined> {
+  // facilityById と同じく、generateMetadata とページ本体の重複を1回にまとめる。
+  corporationBySlug: cache(async (slug: string): Promise<Corporation | undefined> => {
     return safeGet<Corporation>(`SELECT ${CORP_COLS} FROM corporation WHERE slug = ?`, [slug]);
-  },
+  }),
 
   async facilitiesByCorp(slug: string, limit = 300): Promise<Facility[]> {
     return safeAll<Facility>(
