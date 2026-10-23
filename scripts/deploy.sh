@@ -49,6 +49,8 @@ case "${1:-}" in
                  union all select 'corporation', count(*) from corporation
                  union all select 'place', count(*) from place
                  union all select 'area', count(*) from area;"
+    echo
+    echo "▲ worker.ts は描画済み HTML をデプロイのバージョンごとに最大7日キャッシュします。データを入れ直したら ship も実行してください。"
     ;;
 
   agg)
@@ -57,6 +59,8 @@ case "${1:-}" in
     npx wrangler d1 execute "$DB_NAME" --remote --yes --file scripts/agg.sql
     npx wrangler d1 execute "$DB_NAME" --remote --yes \
       --command "select key, length(value) as bytes from agg order by key;"
+    echo
+    echo "▲ worker.ts は描画済み HTML をデプロイのバージョンごとに最大7日キャッシュします。データを入れ直したら ship も実行してください。"
     ;;
 
   ship)
