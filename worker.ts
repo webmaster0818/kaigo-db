@@ -50,10 +50,25 @@ interface Ctx {
   waitUntil(p: Promise<unknown>): void;
 }
 
+// 本物の RSC 要求（ブラウザ内遷移・プリフェッチ）は必ず rsc 等のヘッダーを付ける。これらはキャッシュしない。
+function isRscRequest(request: Request): boolean {
+  const h = request.headers;
+  return h.has("rsc") || h.has("next-router-state-tree") || h.has("next-router-prefetch") || h.has("next-router-segment-prefetch");
+}
+
+// 2026-10-23 以降、Microsoft（AS8075）のクローラーが `?_rsc=…` 付き URL をヘッダーなしの普通の GET で
+// 取りに来ている（10/24 の tail で全体の34%・CPU 超過の54%）。ヘッダーが無いと Next は通常の HTML を描画する
+// （表示部分は `_rsc` なしの URL と同じで、違うのは Next 内部データに `?_rsc=…` が入ることだけ）。
+// この要求は `_rsc` を外した URL として扱い、同じ保存済み HTML を返す（無ければ `_rsc` を外して描画・保存）。
+function stripRscParam(url: URL): URL {
+  const u = new URL(url.toString());
+  u.searchParams.delete("_rsc");
+  return u;
+}
+
 function htmlCacheKey(request: Request, url: URL, env: Env): Request | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
-  const h = request.headers;
-  if (h.has("rsc") || h.has("next-router-state-tree") || h.has("next-router-prefetch") || h.has("next-router-segment-prefetch")) return null;
+  if (isRscRequest(request)) return null;
   if (url.searchParams.has("_rsc") || isSearchRequest(url)) return null;
   if (url.pathname.startsWith("/_next/") || /\.[a-z0-9]+$/i.test(url.pathname)) return null; // 静的ファイル・sitemap.xml 等
   const k = new URL(url.toString());
@@ -91,7 +106,7 @@ function fromCache(hit: Response, isHead: boolean): Response {
 
 export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
-    const url = new URL(request.url);
+    let url = new URL(request.url);
     const asn = Number((request as unknown as { cf?: { asn?: number } }).cf?.asn ?? 0);
     if (isSearchRequest(url) && (BOT_UA.test(request.headers.get("user-agent") ?? "") || CLOUD_ASN.has(asn))) {
       return new Response("Search results are not available to crawlers (see /robots.txt).\n", {
@@ -102,6 +117,11 @@ export default {
           "cache-control": "public, max-age=86400",
         },
       });
+    }
+    if (url.searchParams.has("_rsc") && !isRscRequest(request) && (request.method === "GET" || request.method === "HEAD")) {
+      const stripped = stripRscParam(url);
+      request = new Request(stripped.toString(), request);
+      url = stripped;
     }
     const key = htmlCacheKey(request, url, env);
     if (!key) return handler.fetch(request, env, ctx);
