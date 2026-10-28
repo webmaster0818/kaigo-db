@@ -24,6 +24,66 @@ const CLOUD_ASN = new Set<number>([
   136907, 55990, // Huawei Cloud
 ]);
 
+// ---------------------------------------------------------------------------
+// トップの地名検索（/?q=）の上限（2026-10-28）
+// ---------------------------------------------------------------------------
+// 地名が見つからない入力は D1 の place 表を全件（約6.2万行）読む。10/27 16時(UTC)から、bot を名乗らない
+// 送り元の /?q= でこれが1日26回・約161万行になった（日次上限500万行の約3割）。結果は lib/db.ts で
+// 入力ごとにキャッシュするが、毎回違う入力を大量に送られると防げないので、ここで回数と文字数に上限を掛ける。
+// - 文字数：q が200文字を超える要求は検索しない（住所・地名の入力はこれより十分短い。place.key の最長は27文字）。
+// - 回数：同じ IP（IPv6 は /64）から10分間に30回まで。超えたら 429。データセンターごとの Cache API で数える
+//   （厳密な数ではないが、人の検索で届く回数ではない）。
+const Q_MAX_CHARS = 200;
+const SEARCH_RL_WINDOW_SEC = 600;
+const SEARCH_RL_MAX = 30;
+
+function clientKey(request: Request): string {
+  const ip = request.headers.get("cf-connecting-ip") ?? "";
+  if (!ip.includes(":")) return ip;
+  // IPv6 は先頭64ビット（4グループ）で数える
+  const [head, tail = ""] = ip.split("::");
+  const h = head ? head.split(":") : [];
+  const t = ip.includes("::") ? (tail ? tail.split(":") : []) : [];
+  const groups = ip.includes("::") ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill("0"), ...t] : ip.split(":");
+  return `${groups.slice(0, 4).map((g) => g.toLowerCase()).join(":")}::/64`;
+}
+
+async function overSearchLimit(request: Request, ctx: Ctx): Promise<boolean> {
+  const who = clientKey(request);
+  if (!who) return false;
+  const win = Math.floor(Date.now() / 1000 / SEARCH_RL_WINDOW_SEC);
+  const key = new Request(`https://kaigo-database.com/__rl/${encodeURIComponent(who)}/${win}`);
+  try {
+    const cache = (caches as unknown as { default: Cache }).default;
+    const hit = await cache.match(key);
+    const n = hit ? Number(await hit.text()) || 0 : 0;
+    if (n >= SEARCH_RL_MAX) return true;
+    ctx.waitUntil(
+      cache
+        .put(key, new Response(String(n + 1), { headers: { "cache-control": `public, max-age=${SEARCH_RL_WINDOW_SEC}` } }))
+        .catch(() => {}),
+    );
+  } catch {
+    // 数えられないときは通す
+  }
+  return false;
+}
+
+function searchRefused(status: number, message: string): Response {
+  const body =
+    `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="robots" content="noindex">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1"><title>検索を受け付けられません｜かいごDB</title></head>` +
+    `<body style="font-family:sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem;line-height:1.7">` +
+    `<p>${message}</p><p><a href="/">トップへ戻る</a></p></body></html>`;
+  const headers: Record<string, string> = {
+    "content-type": "text/html; charset=utf-8",
+    "x-robots-tag": "noindex",
+    "cache-control": "no-store",
+  };
+  if (status === 429) headers["retry-after"] = String(SEARCH_RL_WINDOW_SEC);
+  return new Response(body, { status, headers });
+}
+
 function isSearchRequest(url: URL): boolean {
   if (url.pathname !== "/") return false;
   const p = url.searchParams;
@@ -70,16 +130,29 @@ function htmlCacheKey(request: Request, url: URL, env: Env): Request | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   if (isRscRequest(request)) return null;
   if (url.searchParams.has("_rsc") || isSearchRequest(url)) return null;
-  if (url.pathname.startsWith("/_next/") || /\.[a-z0-9]+$/i.test(url.pathname)) return null; // 静的ファイル・sitemap.xml 等
+  if (url.pathname.startsWith("/_next/")) return null;
+  if (/\.[a-z0-9]+$/i.test(url.pathname) && !CACHED_XML.has(url.pathname)) return null; // 静的ファイル等
   const k = new URL(url.toString());
   k.protocol = "https:"; // http と https で同じ HTML（canonical は常に https）
   k.searchParams.set("__v", env.CF_VERSION_METADATA?.id ?? "dev");
   return new Request(k.toString(), { method: "GET" });
 }
 
-async function storeHtml(cache: Cache, key: Request, res: Response): Promise<void> {
+// sitemap も同じ仕組みで保存する（2026-10-28）。D1 から毎回組み立てると CPU 66〜181ms かかり
+// （10/25 の tail）、上限超過（503）で GSC の読み込みエラーになった可能性がある。中身は load とデプロイの
+// ときしか変わらない。件数が極端に少ない（D1 不調時の可能性がある）ものは保存しない。
+const CACHED_XML = new Set(["/sitemap.xml", "/hojin/sitemap.xml"]);
+const XML_MIN_LOC = 1000;
+
+function isCacheableBody(pathname: string, ct: string): boolean {
+  if (CACHED_XML.has(pathname)) return ct.includes("xml");
+  return ct.startsWith("text/html");
+}
+
+async function storeHtml(cache: Cache, key: Request, res: Response, pathname: string): Promise<void> {
   const body = await res.text();
   if (body.includes(ERROR_MARKER)) return;
+  if (CACHED_XML.has(pathname) && body.split("<loc>").length - 1 < XML_MIN_LOC) return;
   const headers = new Headers(res.headers);
   headers.set("x-orig-cache-control", res.headers.get("cache-control") ?? "");
   headers.set("cache-control", `public, max-age=${HTML_TTL_SEC}`);
@@ -118,6 +191,15 @@ export default {
         },
       });
     }
+    const q = url.pathname === "/" ? url.searchParams.get("q") : null;
+    if (q && q.trim()) {
+      if (q.length > Q_MAX_CHARS) {
+        return searchRefused(400, `入力が長すぎます（${Q_MAX_CHARS}文字まで）。住所・地名を短くして検索してください。`);
+      }
+      if (await overSearchLimit(request, ctx)) {
+        return searchRefused(429, "短時間に多くの検索が行われたため、一時的に検索を受け付けていません。10分ほどおいてから再度お試しください。");
+      }
+    }
     if (url.searchParams.has("_rsc") && !isRscRequest(request) && (request.method === "GET" || request.method === "HEAD")) {
       const stripped = stripRscParam(url);
       request = new Request(stripped.toString(), request);
@@ -136,8 +218,8 @@ export default {
 
     const res: Response = await handler.fetch(request, env, ctx);
     const ct = res.headers.get("content-type") ?? "";
-    if (request.method === "GET" && res.status === 200 && ct.startsWith("text/html") && !res.headers.has("set-cookie")) {
-      ctx.waitUntil(storeHtml(cache, key, res.clone()).catch(() => {}));
+    if (request.method === "GET" && res.status === 200 && isCacheableBody(url.pathname, ct) && !res.headers.has("set-cookie")) {
+      ctx.waitUntil(storeHtml(cache, key, res.clone(), url.pathname).catch(() => {}));
     }
     return res;
   },

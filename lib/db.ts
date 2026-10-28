@@ -364,6 +364,108 @@ function likeEscape(s: string): string {
   return s.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
+// ---------------------------------------------------------------------------
+// 地名検索（トップの /?q=）の結果キャッシュ
+// ---------------------------------------------------------------------------
+// 地名が見つからない入力では「入力で始まる」「入力を含む」の LIKE が place 表の全件（約6.2万行）を読む。
+// 2026-10-27 16時(UTC)から、これが1日26回・約161万行（日次上限500万行の約3割）になった。
+// place 表は load のときしか変わらないので、同じ入力の結果（見つからなかったことも含む）を
+// isolate 内メモ＋Cache API に24時間保存し、2回目以降は D1 を読まない。表示される結果は変わらない。
+const PLACE_TTL_SEC = 24 * 60 * 60;
+// place.key の最長は27文字（2026-10-28 時点）。これより長い入力を「含む」「で始まる」キーは存在しないので、
+// LIKE の全件読みを省いても結果は同じ（余裕を見て64文字）。
+const PLACE_KEY_MAX = 64;
+const placeMemo = new Map<string, { at: number; value: unknown }>();
+const PLACE_MEMO_MAX = 500;
+// 「%入力%」が0件だったキー（同じ要求の placeSuggestions で D1 を読まないため）
+const noContainsMatch = new Set<string>();
+function rememberNoContains(k: string): void {
+  noContainsMatch.delete(k);
+  noContainsMatch.add(k);
+  while (noContainsMatch.size > PLACE_MEMO_MAX) noContainsMatch.delete(noContainsMatch.values().next().value as string);
+}
+
+async function cachedPlace<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const m = placeMemo.get(key);
+  if (m && now - m.at < PLACE_TTL_SEC * 1000) return m.value as T;
+
+  const cacheStore = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
+  const { isD1 } = getDriver();
+  const req = isD1 && cacheStore ? new Request(`${SITE_URL}/__place/${encodeURIComponent(key)}`) : null;
+  if (req && cacheStore) {
+    try {
+      const hit = await cacheStore.match(req);
+      if (hit) {
+        const { v: raw } = (await hit.json()) as { v: T | null };
+        const v = (raw === null ? undefined : raw) as T; // 「見つからない」は null で保存している
+        placeMemo.delete(key);
+        placeMemo.set(key, { at: now, value: v });
+        return v;
+      }
+    } catch {
+      // キャッシュの不調は無視して DB を読む
+    }
+  }
+
+  const value = await fn(); // D1 失敗は例外のまま（保存しない）
+  placeMemo.delete(key);
+  placeMemo.set(key, { at: now, value });
+  while (placeMemo.size > PLACE_MEMO_MAX) placeMemo.delete(placeMemo.keys().next().value as string);
+  if (req && cacheStore) {
+    try {
+      await cacheStore.put(
+        req,
+        new Response(JSON.stringify({ v: value ?? null }), {
+          headers: { "content-type": "application/json", "cache-control": `public, max-age=${PLACE_TTL_SEC}` },
+        }),
+      );
+    } catch {
+      // 書けなくても表示は続ける
+    }
+  }
+  return value;
+}
+
+/** resolvePlace の本体（キャッシュなし）。手順はそのまま */
+async function resolvePlaceUncached(k: string): Promise<PlaceHit | undefined> {
+  // 1) 入力の先頭に一致する最長キー
+  const prefixes: string[] = [];
+  for (let len = Math.min(k.length, 40); len >= 2; len--) prefixes.push(k.slice(0, len));
+  const byPrefix = await safeGet<PlaceRow>(
+    `SELECT ${PLACE_COLS} FROM place WHERE key IN (${prefixes.map(() => "?").join(",")})
+     ORDER BY LENGTH(key) DESC, facility_count DESC LIMIT 1`,
+    prefixes,
+  );
+  if (byPrefix) return { ...byPrefix, match: byPrefix.key === k ? "exact" : "prefix" };
+
+  if (k.length <= PLACE_KEY_MAX) {
+    // 2) 入力で始まるキー
+    const esc = likeEscape(k);
+    const startsWith = await safeGet<PlaceRow>(
+      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
+       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
+      [`${esc}%`],
+    );
+    if (startsWith) return { ...startsWith, match: "startsWith" };
+
+    // 3) 入力を含むキー
+    const contains = await safeGet<PlaceRow>(
+      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
+       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
+      [`%${esc}%`],
+    );
+    if (contains) return { ...contains, match: "contains" };
+  }
+  // 4) 「〇〇駅」→「〇〇」で引き直す
+  const withoutStation = k.replace(/駅(前|北口|南口|東口|西口)?$/, "");
+  if (withoutStation !== k && withoutStation.length >= 2) {
+    const again = await queries.resolvePlace(withoutStation);
+    if (again) return { ...again, match: "station" };
+  }
+  return undefined;
+}
+
 /**
  * /ranking/* の絞り込みを WHERE 句の続き（" AND ..."）に変換する。
  * 値は必ずプレースホルダで渡す（SQLに文字列を埋め込まない）。
@@ -728,51 +830,27 @@ export const queries = {
   async resolvePlace(input: string): Promise<PlaceHit | undefined> {
     const k = placeKey(input);
     if (k.length < 2) return undefined;
-
-    // 1) 入力の先頭に一致する最長キー
-    const prefixes: string[] = [];
-    for (let len = Math.min(k.length, 40); len >= 2; len--) prefixes.push(k.slice(0, len));
-    const byPrefix = await safeGet<PlaceRow>(
-      `SELECT ${PLACE_COLS} FROM place WHERE key IN (${prefixes.map(() => "?").join(",")})
-       ORDER BY LENGTH(key) DESC, facility_count DESC LIMIT 1`,
-      prefixes,
-    );
-    if (byPrefix) return { ...byPrefix, match: byPrefix.key === k ? "exact" : "prefix" };
-
-    // 2) 入力で始まるキー
-    const esc = likeEscape(k);
-    const startsWith = await safeGet<PlaceRow>(
-      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
-       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
-      [`${esc}%`],
-    );
-    if (startsWith) return { ...startsWith, match: "startsWith" };
-
-    // 3) 入力を含むキー
-    const contains = await safeGet<PlaceRow>(
-      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
-       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
-      [`%${esc}%`],
-    );
-    if (contains) return { ...contains, match: "contains" };
-
-    // 4) 「〇〇駅」→「〇〇」で引き直す
-    const withoutStation = k.replace(/駅(前|北口|南口|東口|西口)?$/, "");
-    if (withoutStation !== k && withoutStation.length >= 2) {
-      const again = await queries.resolvePlace(withoutStation);
-      if (again) return { ...again, match: "station" };
-    }
-    return undefined;
+    const hit = await cachedPlace(`resolve:${k}`, () => resolvePlaceUncached(k));
+    // 見つからない＝3) の「%入力%」が0件だった（入力が長すぎる場合も同じく0件）
+    if (!hit) rememberNoContains(k);
+    return hit;
   },
 
-  /** 解決できなかったときに出す候補（入力を含む地名） */
+  /**
+   * 解決できなかったときに出す候補（入力を含む地名）。
+   * トップでは resolvePlace が undefined のときだけ呼ばれる。そのとき resolvePlace の 3) で
+   * 同じ「%入力%」が0件だったことが分かっているので、D1 を読まずに空を返す（結果は同じ）。
+   */
   async placeSuggestions(input: string, limit = 8): Promise<PlaceRow[]> {
     const k = placeKey(input);
-    if (k.length < 2) return [];
-    return safeAll<PlaceRow>(
-      `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
-       ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT ?`,
-      [`%${likeEscape(k)}%`, limit],
+    if (k.length < 2 || k.length > PLACE_KEY_MAX) return [];
+    if (noContainsMatch.has(k)) return [];
+    return cachedPlace(`suggest:${k}/${limit}`, () =>
+      safeAll<PlaceRow>(
+        `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
+         ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT ?`,
+        [`%${likeEscape(k)}%`, limit],
+      ),
     );
   },
 
