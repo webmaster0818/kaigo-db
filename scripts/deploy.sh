@@ -65,6 +65,8 @@ case "${1:-}" in
 
   ship)
     npx opennextjs-cloudflare build
+    # 施設・法人ページの直接描画（lib/direct.ts）が使う CSS・アイコンの <link> をこのビルドから取り出す
+    node scripts/gen-direct-shell.mjs
     npx wrangler deploy
     ;;
 

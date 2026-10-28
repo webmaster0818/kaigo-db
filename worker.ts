@@ -12,6 +12,12 @@ import handler from "./.open-next/worker.js";
 // @ts-expect-error: 同上
 export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-next/worker.js";
 
+import type { D1Database } from "@cloudflare/workers-types";
+import { renderFacility, renderHojin, type DirectShell } from "./lib/direct";
+// scripts/gen-direct-shell.mjs がビルド後に作る（CSS・アイコンの <link>）。無ければデプロイが失敗する
+import SHELL_JSON from "./lib/direct-shell.generated.json";
+const SHELL = SHELL_JSON as DirectShell;
+
 const BOT_UA = /bot|crawl|spider|slurp|meta-externalagent|facebookexternalhit|bytespider|petalbot|ahrefs|semrush|dataforseo/i;
 
 // 2026-10-21 15時(UTC)以降、Alibaba Cloud（AS45102・シンガポール）から、普通のブラウザを名乗る UA と
@@ -105,6 +111,7 @@ const ERROR_MARKER = "データベースに一時的に接続できませんで�
 
 interface Env {
   CF_VERSION_METADATA?: { id?: string };
+  DB?: D1Database;
 }
 interface Ctx {
   waitUntil(p: Promise<unknown>): void;
@@ -177,6 +184,47 @@ function fromCache(hit: Response, isHead: boolean): Response {
   return new Response(isHead ? null : hit.body, { status: 200, headers });
 }
 
+// ---------------------------------------------------------------------------
+// 施設・法人ページの直接描画（2026-10-28・lib/direct.ts）
+// ---------------------------------------------------------------------------
+// Next の描画は1回 CPU 20〜40ms で、無料プランの上限 10ms を超えた分が 503 になる（超過の 99% がこの2種類）。
+// クエリ無しの GET/HEAD（RSC 要求以外）は lib/direct.ts で HTML を組み立てて返す。表示部分は Next と同じ。
+// 見つからない・失敗したときは null を返し、今までどおり Next（404・エラー画面）に回す。
+// 確認用：要求ヘッダー `x-kaigo-render: next` を付けると Next で描画する（比較のため）。
+const DIRECT_PATH = /^\/(facility|hojin)\/([^/]+)\/$/;
+
+async function renderDirect(request: Request, url: URL, env: Env): Promise<Response | null> {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  if (url.search !== "" || isRscRequest(request) || !env.DB) return null;
+  if (request.headers.get("x-kaigo-render") === "next") return null;
+  const m = DIRECT_PATH.exec(url.pathname);
+  if (!m) return null;
+  let key: string;
+  try {
+    key = decodeURIComponent(m[2]);
+  } catch {
+    return null;
+  }
+  let html: string | null;
+  try {
+    html = m[1] === "facility" ? await renderFacility(env.DB, key, SHELL) : await renderHojin(env.DB, key, SHELL);
+  } catch (e) {
+    console.error("[direct] 失敗したため Next で描画します:", (e as Error).message);
+    return null;
+  }
+  if (!html) return null;
+  return new Response(request.method === "HEAD" ? null : html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      link: SHELL.linkHeader,
+      vary: "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-direct-html": "1",
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     let url = new URL(request.url);
@@ -205,6 +253,9 @@ export default {
       request = new Request(stripped.toString(), request);
       url = stripped;
     }
+    const direct = await renderDirect(request, url, env);
+    if (direct) return direct;
+
     const key = htmlCacheKey(request, url, env);
     if (!key) return handler.fetch(request, env, ctx);
 

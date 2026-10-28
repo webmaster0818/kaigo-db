@@ -14,3 +14,4 @@ data/*.sqlite-wal
 data/*.sqlite-shm
 data/d1/
 raw/
+lib/direct-shell.generated.json
