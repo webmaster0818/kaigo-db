@@ -1,36 +1,42 @@
 @import "tailwindcss";
 
-/* ===== かいごDB デザイントークン =====
-   子が親のために調べるサイト。明るく・やわらかく、でも数字は読みやすく。
-   白＋クリーム基調＋アクセント1色（あたたかいオレンジ）。補助色に若草。
-   表・数字の可読性は落とさない（tabular-nums と十分なコントラストを維持）。 */
+/* ===== かいごDB デザイントークン（2026-10 リデザイン） =====
+   方針：紙のように静かな地色に、黒に近い墨色の文字。装飾は罫線（枠）と余白だけで組む。
+   - 角丸は使わない（カード・ボタン・入力欄・画像すべて直角）。
+   - 影は使わない。背景との境目は 1px の枠で示す（白いカード × 生成りの地色でも輪郭が見えるよう、枠は濃いめ）。
+   - 色は、ボタン・リンクのアクセント1色（従来のオレンジ）だけ。アイコンは墨色の線画（components/Icon.tsx）。
+   - 絵文字は使わない。
+   - 施設・法人ページ（lib/direct.ts）も同じクラスを使うので、クラス名を変えるときは direct.ts も直すこと。 */
 @theme {
-  --color-ink: #2c2620;
-  --color-muted: #6b6259;
-  --color-muted-2: #948a80;
+  --color-ink: #1d1a17;
+  --color-muted: #59524b;
+  --color-muted-2: #7a7168;
 
-  --color-line: #eee3d8;
-  --color-line-strong: #dccbba;
+  --color-line: #e2d9ce;
+  --color-line-strong: #c9bcad;
 
   --color-surface: #ffffff;
-  --color-paper: #fffaf4;
-  --color-tint: #fdf3ea;
+  --color-paper: #faf6f0;
+  --color-tint: #f4eee5;
 
-  /* アクセント: 白背景で本文リンクに使える濃さのオレンジ（コントラスト比 4.6:1） */
+  /* アクセント: 従来と同じ色（白背景で本文リンクに使える濃さ・コントラスト比 4.6:1） */
   --color-accent: #c0551f;
   --color-accent-strong: #9d4416;
   --color-accent-weak: #fdeee3;
 
-  /* 補助: 落ち着いた若草。バッジや2番目の導線に */
   --color-leaf: #4f7c5a;
   --color-leaf-weak: #eaf3ec;
 
-  --font-sans: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo,
+  --font-sans: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", Meiryo,
     system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Noto Serif CJK JP",
+    serif;
 
-  --radius-card: 14px;
+  --radius-card: 0px;
 }
 
+/* 要素の既定値は base レイヤーに置く（text-accent などのユーティリティが効くように） */
+@layer base {
 html {
   color-scheme: light;
 }
@@ -42,6 +48,7 @@ body {
   font-feature-settings: "palt";
   -webkit-font-smoothing: antialiased;
   line-height: 1.8;
+  letter-spacing: 0.02em;
 }
 
 /* 数字は等幅で縦に揃える（定員・件数・距離） */
@@ -53,83 +60,329 @@ a {
   color: inherit;
 }
 
-:where(a, button, input, select):focus-visible {
+:where(a, button, input, select, summary):focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-/* 見出し。装飾は最小限、階層だけで区切る */
+/* 見出し。明朝で静かに、階層は大きさと余白で示す */
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
 h1 {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 1.75rem;
   line-height: 1.45;
-  letter-spacing: -0.01em;
 }
 h2 {
-  font-size: 1.2rem;
-  font-weight: 700;
+  font-size: 1.3rem;
   line-height: 1.5;
 }
 h3 {
   font-size: 0.95rem;
   font-weight: 700;
 }
+@media (min-width: 768px) {
+  h1 {
+    font-size: 2.1rem;
+  }
+  h2 {
+    font-size: 1.45rem;
+  }
+}
 
+}
+
+/* 部品は components レイヤー（w-auto・mt-* などのユーティリティで上書きできる） */
+@layer components {
 /* ---- 共通パーツ ---------------------------------------------------------- */
 
-/* カード。角丸＋ごく薄い影で「やわらかさ」を出す。影は濃くしない */
+/* カード。白地＋はっきりした 1px の枠。角丸・影なし */
 .card {
   background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  box-shadow: 0 1px 2px rgb(44 38 32 / 4%);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0;
 }
 .card-link {
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition: border-color 0.2s, background-color 0.2s;
 }
 .card-link:hover {
-  border-color: var(--color-accent);
-  box-shadow: 0 4px 12px rgb(192 85 31 / 10%);
-  transform: translateY(-1px);
+  border-color: var(--color-ink);
 }
 
-/* セクション見出しの前に置く小さなラベル */
+/* セクション見出しの前に置く小さなラベル（細い罫線＋字間広め） */
 .eyebrow {
-  display: inline-block;
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--color-accent);
-  background: var(--color-accent-weak);
-  border-radius: 999px;
-  padding: 2px 10px;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+.eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: currentColor;
 }
 
-/* 主CTA */
+/* ---- ボタン：形・高さ・字の大きさを全ページで統一（色は従来のアクセントのまま） ---- */
+.btn,
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
 .btn-primary {
   background: var(--color-accent);
+  border-color: var(--color-accent);
   color: #fff;
-  border-radius: 999px;
-  font-weight: 700;
-  transition: background-color 0.15s;
 }
 .btn-primary:hover {
   background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+.btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-line-strong);
+  color: var(--color-ink);
+}
+.btn-secondary:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
-/* 注記ブロック（出典・並び順の根拠など、読み飛ばされては困らない注意書き） */
+/* 選択肢（都道府県・市区町村・種別・候補地名など）。すべて同じ形にそろえる */
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ink);
+  transition: border-color 0.2s, color 0.2s;
+}
+a.chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.chip-count {
+  font-size: 12px;
+  color: var(--color-muted-2);
+  font-variant-numeric: tabular-nums;
+}
+.chip-disabled {
+  color: var(--color-muted-2);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--color-line);
+}
+
+/* 入力欄・セレクト */
+.field {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0;
+  font-size: 16px;
+  color: var(--color-ink);
+}
+.field:hover {
+  border-color: var(--color-muted-2);
+}
+@media (min-width: 640px) {
+  .field {
+    font-size: 14px;
+  }
+}
+
+/* 注記ブロック（出典・並び順の根拠など、読み飛ばされては困る注意書き） */
 .note {
-  background: var(--color-tint);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-left: 3px solid var(--color-ink);
+  border-radius: 0;
+}
+
+/* 線画アイコン（components/Icon.tsx）。色は文字色を継ぐ（墨色） */
+.icon {
+  display: block;
+  flex: none;
+  color: var(--color-ink);
+}
+
+/* ファーストビューの画像枠。角丸なし・左端を地色に溶かす。
+   写真に差し替えるときは components/HeroVisual.tsx の HERO だけを直す */
+.hero-visual {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1100 / 613;
+}
+.hero-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 18%), linear-gradient(to bottom, transparent 0, #000 10%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent 0, #000 18%), linear-gradient(to bottom, transparent 0, #000 10%);
+  mask-composite: intersect;
+}
+@media (max-width: 767px) {
+  .hero-visual img {
+    -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  }
+}
+
+/* 番号付きの手順（エリアから探す：都道府県 → 市区町村 → 施設） */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface);
+}
+.steps > li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.steps > li + li {
+  border-left: 1px solid var(--color-line);
+}
+.steps .step-no {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 639px) {
+  .steps > li {
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+}
+
+}
+
+/* ---- スクロールで静かに現れる（CSS のスクロール連動アニメーション） ----
+   - JS は使わない。対応していないブラウザ・JS無効・動きを減らす設定では、最初から普通に表示される
+     （初期状態で隠したままになることはない）。
+   - 画面に入ってくる途中だけ、わずかに浮き上がりながら不透明になる。 */
+@keyframes kaigo-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: kaigo-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 180px;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .card-link,
-  .btn-primary {
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .chip {
     transition: none;
   }
-  .card-link:hover {
-    transform: none;
+}
+
+@media print {
+  .reveal {
+    animation: none !important;
   }
+}
+
+/* 一覧表。枠（.card）の中に置き、セルの余白をそろえる（各セルの py-2 pr-3 などより優先） */
+.dtable th,
+.dtable td {
+  padding: 12px 12px;
+}
+.dtable th:first-child,
+.dtable td:first-child {
+  padding-left: 16px;
+}
+.dtable th:last-child,
+.dtable td:last-child {
+  padding-right: 16px;
+}
+.dtable thead tr {
+  background: var(--color-tint);
+}
+.dtable thead th {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.dtable tbody tr:last-child {
+  border-bottom: 0;
+}
+
+/* 数字の帯（市区町村・法人・並べ替えページの冒頭）。枠で囲み、項目を縦罫で区切る */
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+}
+.stat-row > div {
+  flex: 1 1 9rem;
+  padding: 14px 20px;
+  border-right: 1px solid var(--color-line);
+}
+.stat-row > div:last-child {
+  border-right: 0;
+}
+.stat-row dt {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+.stat-row dd {
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-ink);
 }

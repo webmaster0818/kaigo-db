@@ -44,26 +44,26 @@ export default function PlaceSearchForm({
   }
 
   return (
-    <form method="get" action="/" className="card p-4 sm:p-5">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
+    <form method="get" action="/" className="card p-5 sm:p-7">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
         <label className="block text-xs">
-          <span className="font-bold text-ink">住所・地名</span>
+          <span className="font-bold tracking-wider text-ink">住所・地名</span>
           <input
             name="q"
             value={q}
             onChange={(e) => { setQ(e.target.value); setLat(""); setLng(""); }}
             placeholder="例: 東京都世田谷区成城 / 札幌市中央区"
             autoComplete="street-address"
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2.5 text-base sm:text-sm"
+            className="field mt-1.5"
           />
         </label>
 
         <label className="block text-xs">
-          <span className="font-bold text-ink">距離</span>
+          <span className="font-bold tracking-wider text-ink">距離</span>
           <select
             name="radius"
             defaultValue={defaults.radius ?? "3"}
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2.5 text-base sm:text-sm"
+            className="field mt-1.5"
           >
             {["1", "3", "5", "10", "20"].map((r) => (
               <option key={r} value={r}>{r}km以内</option>
@@ -72,11 +72,11 @@ export default function PlaceSearchForm({
         </label>
 
         <label className="block text-xs">
-          <span className="font-bold text-ink">サービス種別</span>
+          <span className="font-bold tracking-wider text-ink">サービス種別</span>
           <select
             name="type"
             defaultValue={defaults.type ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2.5 text-base sm:text-sm"
+            className="field mt-1.5"
           >
             <option value="">すべて</option>
             {types.map((t) => (
@@ -94,17 +94,17 @@ export default function PlaceSearchForm({
       {/* 並べ替えは既定で近い順。結果側でも切り替えられる */}
       <input type="hidden" name="sort" value={defaults.sort === "capacity" ? "capacity" : "distance"} />
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          className="btn-primary px-7 py-2.5 text-sm"
+          className="btn-primary w-full sm:w-auto sm:min-w-[12rem]"
         >
           近い順に検索
         </button>
         <button
           type="button"
           onClick={locate}
-          className="rounded-full border border-line-strong px-4 py-2.5 text-xs hover:bg-tint"
+          className="btn-secondary w-full sm:w-auto"
         >
           現在地を使用
         </button>
@@ -114,7 +114,7 @@ export default function PlaceSearchForm({
         {status && <span className="text-xs text-muted">{status}</span>}
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-muted">
+      <p className="mt-5 border-t border-line pt-4 text-[11px] leading-relaxed text-muted">
         入力した地名は、掲載施設の緯度・経度から作成した地名辞書により座標に変換しています（外部の地図サービスは使用していません）。
         駅名を入力した場合は、同じ名称の地名の位置で検索します（駅の座標は保有していません）。
       </p>

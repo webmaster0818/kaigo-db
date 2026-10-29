@@ -4,11 +4,13 @@
 // 個別の施設の入居条件・費用ではない。数字や評価の入った独自の比較は書かない。
 // （個々の施設で条件は違うため、各カードに必ずその旨を添えて表示する）
 
+import type { IconName } from "@/components/Icon";
+
 export interface TypeGuide {
   /** 短い呼び名。カードの見出しに使う（正式名は別途出す） */
   short: string;
-  /** アイコン画像のパス */
-  icon: string;
+  /** 線画アイコンの名前（components/Icon.tsx） */
+  icon: IconName;
   /** 制度上どういう施設か（1〜2文） */
   summary: string;
   /** 制度上の主な対象者 */
@@ -20,7 +22,7 @@ export interface TypeGuide {
 export const TYPE_GUIDES: Record<string, TypeGuide> = {
   tokuyo: {
     short: "特別養護老人ホーム（特養）",
-    icon: "/img/type-tokuyo.webp",
+    icon: "tokuyo",
     summary:
       "常時の介護が必要で、自宅での生活が難しくなった方が長く暮らすための介護保険施設です。看取りまで対応する施設もあります。",
     target: "原則として要介護3以上（特例により要介護1・2で入所できる場合があります）",
@@ -28,7 +30,7 @@ export const TYPE_GUIDES: Record<string, TypeGuide> = {
   },
   roken: {
     short: "介護老人保健施設（老健）",
-    icon: "/img/type-roken.webp",
+    icon: "roken",
     summary:
       "病状が安定した方が、リハビリテーションを受けて在宅復帰を目指すための介護保険施設です。医師の配置が義務づけられています。",
     target: "要介護1以上",
@@ -36,7 +38,7 @@ export const TYPE_GUIDES: Record<string, TypeGuide> = {
   },
   "group-home": {
     short: "グループホーム（認知症対応型共同生活介護）",
-    icon: "/img/type-group-home.webp",
+    icon: "group-home",
     summary:
       "認知症の方が少人数のユニットで共同生活を送るサービスです。地域密着型サービスのため、原則としてその市町村に住民票がある方が対象になります。",
     target: "要支援2以上で、認知症の診断を受けている方",
@@ -44,7 +46,7 @@ export const TYPE_GUIDES: Record<string, TypeGuide> = {
   },
   "yuryo-rojin-home": {
     short: "介護付き有料老人ホーム（特定施設入居者生活介護）",
-    icon: "/img/type-yuryo.webp",
+    icon: "yuryo",
     summary:
       "有料老人ホームなどのうち、都道府県等から「特定施設」の指定を受け、施設の職員が介護を提供するものです。費用や設備は施設ごとの差が大きい類型です。",
     target: "要介護認定を受けている方（施設により要支援・自立の方を受け入れる場合があります）",

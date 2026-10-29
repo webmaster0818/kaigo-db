@@ -17,7 +17,7 @@ export default function RankingNote({
   extra?: string;
 }) {
   return (
-    <div className="mb-5 border-y border-line py-3 text-sm leading-relaxed">
+    <div className="note mb-6 px-5 py-4 text-sm leading-relaxed">
       <p className="text-ink">{basis}</p>
       {extra && <p className="mt-1 text-muted">{extra}</p>}
       <p className="mt-1 font-bold text-ink">{NOT_A_RECOMMENDATION}</p>

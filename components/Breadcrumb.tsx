@@ -23,12 +23,12 @@ export default function Breadcrumb({ items }: { items: Crumb[] }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <nav aria-label="パンくずリスト" className="mb-5">
-        <ol className="flex flex-wrap items-center gap-1 text-xs text-muted">
+      <nav aria-label="パンくずリスト" className="mb-8">
+        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           {items.map((c, i) => (
-            <li key={`${c.name}-${i}`} className="flex items-center gap-1">
+            <li key={`${c.name}-${i}`} className="flex items-center gap-2">
               {c.href ? (
-                <Link href={c.href} className="hover:text-accent hover:underline">
+                <Link href={c.href} className="underline-offset-4 hover:text-ink hover:underline">
                   {c.name}
                 </Link>
               ) : (
@@ -36,7 +36,7 @@ export default function Breadcrumb({ items }: { items: Crumb[] }) {
                   {c.name}
                 </span>
               )}
-              {i < items.length - 1 && <span className="text-line-strong">›</span>}
+              {i < items.length - 1 && <span className="text-muted-2">›</span>}
             </li>
           ))}
         </ol>

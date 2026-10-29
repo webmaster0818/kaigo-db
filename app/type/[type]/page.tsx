@@ -50,27 +50,27 @@ export default async function TypePage({ params }: { params: Params }) {
           { name },
         ]}
       />
-      <h1 className="mb-3">{name}</h1>
+      <h1 className="mb-4">{name}</h1>
 
       {total === 0 ? (
         <EmptyState detail={`${name}のデータは現在掲載しておりません。公開までしばらくお待ちください。`} />
       ) : (
         <>
-          <p className="mb-5 text-sm text-muted">
+          <p className="mb-10 text-sm text-muted">
             全国の掲載施設数 <span className="tabular-nums font-bold text-ink">{total.toLocaleString()}</span> 件です。
             定員・公式URLは、公表データに記載のあるもののみを表示しています（記載のない項目は「{NO_DATA}」と表示）。
           </p>
 
           {prefs.length > 0 && (
-            <section className="mb-8">
-              <h2 className="mb-2">都道府県別の件数</h2>
-              <ul className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <section className="mb-12">
+              <h2 className="mb-4">都道府県別の件数</h2>
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {prefs.map((p) => (
-                  <li key={p.pref_slug} className="flex items-baseline justify-between border-b border-line py-1">
-                    <Link href={`/area/${seg(p.pref_slug)}/`} className="hover:text-accent hover:underline">
+                  <li key={p.pref_slug} className="reveal">
+                    <Link href={`/area/${seg(p.pref_slug)}/`} className="chip w-full">
                       {p.prefecture}
+                      <span className="chip-count">{Number(p.n).toLocaleString()}</span>
                     </Link>
-                    <span className="tabular-nums text-xs text-muted">{Number(p.n).toLocaleString()}</span>
                   </li>
                 ))}
               </ul>
@@ -78,7 +78,7 @@ export default async function TypePage({ params }: { params: Params }) {
           )}
 
           <section>
-            <h2 className="mb-2">施設一覧</h2>
+            <h2 className="mb-4">施設一覧</h2>
             <FacilityTable rows={rows} hideType />
             {total > LIST_LIMIT && (
               <p className="mt-3 text-xs text-muted">

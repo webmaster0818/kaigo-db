@@ -23,27 +23,32 @@ export default async function AreaIndex() {
   return (
     <main>
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "都道府県から探す" }]} />
-      <h1 className="mb-2">都道府県から探す</h1>
-      <p className="mb-5 text-sm text-muted">
+      <h1 className="mb-3">都道府県から探す</h1>
+      <p className="mb-8 text-sm text-muted">
         {total > 0 ? <>掲載している {total.toLocaleString()} 件の施設を、都道府県・市区町村で絞り込むことができます。</> : "データを準備しております。"}
       </p>
 
       {total === 0 ? (
         <EmptyState />
       ) : (
-        <ul className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {PREF_ORDER.map((name) => {
             const slug = PREF_SLUGS[name];
             const row = bySlug.get(slug);
             const n = Number(row?.facility_count ?? 0);
             return (
-              <li key={slug} className="flex items-baseline justify-between border-b border-line py-1">
+              <li key={slug} className="reveal">
                 {n > 0 ? (
-                  <Link href={`/area/${slug}/`} className="hover:text-accent hover:underline">{name}</Link>
+                  <Link href={`/area/${slug}/`} className="chip w-full">
+                    {name}
+                    <span className="chip-count">{n.toLocaleString()}</span>
+                  </Link>
                 ) : (
-                  <span className="text-muted-2">{name}</span>
+                  <span className="chip chip-disabled w-full">
+                    {name}
+                    <span className="chip-count">-</span>
+                  </span>
                 )}
-                <span className="tabular-nums text-xs text-muted">{n > 0 ? n.toLocaleString() : "-"}</span>
               </li>
             );
           })}
@@ -51,7 +56,7 @@ export default async function AreaIndex() {
       )}
 
       {/* 都道府県スラッグは lib/slug.ts の固定表で管理（例: 東京都 → tokyo） */}
-      <p className="mt-6 text-xs text-muted">
+      <p className="mt-8 text-xs text-muted">
         市区町村名から探す場合は、都道府県ページ（例:{" "}
         <Link href={`/area/${seg("tokyo")}/`} className="text-accent hover:underline">/area/tokyo/</Link>
         ）をご利用ください。

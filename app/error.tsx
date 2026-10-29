@@ -8,7 +8,7 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
     <main>
       <meta name="robots" content="noindex" />
       <h1 className="mb-2">現在、ページを表示できません</h1>
-      <div className="rounded border border-dashed border-line-strong bg-surface px-4 py-10 text-center">
+      <div className="border border-dashed border-line-strong bg-surface px-4 py-12 text-center">
         <p className="text-sm font-bold text-ink">データベースに一時的に接続できませんでした</p>
         <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted">
           しばらく時間をおいてから、再度お試しください。
@@ -16,7 +16,7 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
         <button
           type="button"
           onClick={() => reset()}
-          className="mt-4 rounded border border-line-strong px-4 py-1.5 text-xs text-accent hover:bg-tint"
+          className="btn-secondary mt-5"
         >
           再読み込み
         </button>

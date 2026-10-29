@@ -7,7 +7,7 @@ import { LICENSE_NAME, LICENSE_URL, SOURCE_NAME, SOURCE_URL } from "@/lib/site";
  */
 export default function SourceNote({ acquiredOn }: { acquiredOn?: string | null }) {
   return (
-    <p className="mt-8 border-t border-line pt-3 text-[11px] leading-relaxed text-muted">
+    <p className="mt-16 border-t border-line-strong pt-5 text-[11px] leading-relaxed text-muted">
       出典：
       <a href={SOURCE_URL} rel="noopener noreferrer" target="_blank" className="underline hover:text-accent">
         {SOURCE_NAME}

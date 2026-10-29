@@ -28,9 +28,9 @@ export default async function RankingIndex() {
   return (
     <main>
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "並べ替えて探す" }]} />
-      <h1 className="mb-3">並べ替えて探す</h1>
+      <h1 className="mb-6">並べ替えて探す</h1>
 
-      <div className="mb-6 border-y border-line py-3 text-sm leading-relaxed">
+      <div className="note mb-10 px-5 py-4 text-sm leading-relaxed">
         <p>
           厚生労働省の公表データに記載されている値にもとづいて並べ替えた一覧です。
           並べ替えの基準とした値は、各ページの冒頭に記載しています。
@@ -49,10 +49,10 @@ export default async function RankingIndex() {
       )}
 
       <section>
-        <h2 className="mb-2">並べ替えの基準</h2>
-        <ul className="border-t border-line">
+        <h2 className="mb-4">並べ替えの基準</h2>
+        <ul className="card">
           {RANKING_AXES.map((a) => (
-            <li key={a.href} className="border-b border-line py-3">
+            <li key={a.href} className="reveal border-b border-line px-5 py-4 last:border-0">
               <Link href={a.href} className="text-sm font-bold text-accent hover:underline">
                 {a.label}
               </Link>

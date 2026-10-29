@@ -42,9 +42,9 @@ export default async function DataPage() {
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "データについて" }]} />
       <h1 className="mb-3">データについて</h1>
 
-      <section className="mb-8">
-        <h2 className="mb-2">出典とライセンス</h2>
-        <dl className="border-t border-line text-sm">
+      <section className="mb-12">
+        <h2 className="mb-4">出典とライセンス</h2>
+        <dl className="card text-sm">
           {[
             ["出典", <a key="s" href={SOURCE_URL} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{SOURCE_NAME}</a>],
             ["ライセンス", <a key="l" href={LICENSE_URL} target="_blank" rel="license noopener noreferrer" className="text-accent hover:underline">{LICENSE_NAME}</a>],
@@ -52,7 +52,7 @@ export default async function DataPage() {
             ["最終取り込み", meta.imported_at ?? NO_DATA],
             ["掲載施設数", total > 0 ? `${total.toLocaleString()}件` : "0件（準備中）"],
           ].map(([k, v], i) => (
-            <div key={i} className="grid grid-cols-1 gap-0.5 border-b border-line py-2 sm:grid-cols-[10rem_1fr] sm:gap-3">
+            <div key={i} className="grid grid-cols-1 gap-1 border-b border-line px-4 py-3.5 last:border-0 sm:grid-cols-[10rem_1fr] sm:gap-4 sm:px-6">
               <dt className="text-xs text-muted">{k as string}</dt>
               <dd className="text-sm">{v as React.ReactNode}</dd>
             </div>
@@ -60,8 +60,8 @@ export default async function DataPage() {
         </dl>
       </section>
 
-      <section className="mb-8">
-        <h2 className="mb-2">項目ごとの充足率</h2>
+      <section className="mb-12">
+        <h2 className="mb-4">項目ごとの充足率</h2>
         <p className="mb-3 text-sm leading-relaxed text-muted">
           「充足率」は、その項目に値が記載されている施設の割合です。記載のない項目は「{NO_DATA}」と表示し、
           推定値による補完は行っていません。
@@ -76,8 +76,8 @@ export default async function DataPage() {
         ) : (
           <>
             {/* PC: 表 */}
-            <div className="hidden md:block">
-              <table className="w-full border-collapse text-sm">
+            <div className="card hidden md:block">
+              <table className="dtable w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-line-strong text-left text-xs text-muted">
                     <th scope="col" className="py-2 pr-3 font-medium">項目</th>
@@ -99,9 +99,9 @@ export default async function DataPage() {
               </table>
             </div>
             {/* スマホ: カード */}
-            <ul className="space-y-2 md:hidden">
+            <ul className="space-y-3 md:hidden">
               {coverage.fields.map((f) => (
-                <li key={f.key} className="card p-3 text-sm">
+                <li key={f.key} className="card p-4 text-sm">
                   <div className="flex items-baseline justify-between">
                     <span>{f.label}</span>
                     <span className="tabular-nums text-xs text-muted">
@@ -117,10 +117,10 @@ export default async function DataPage() {
       </section>
 
       {byType.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-2">サービス種別ごとの件数と充足率</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] border-collapse text-sm">
+        <section className="mb-12">
+          <h2 className="mb-4">サービス種別ごとの件数と充足率</h2>
+          <div className="card overflow-x-auto">
+            <table className="dtable w-full min-w-[520px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-muted">
                   <th scope="col" className="py-2 pr-3 font-medium">サービス種別</th>
@@ -144,8 +144,8 @@ export default async function DataPage() {
         </section>
       )}
 
-      <section className="mb-8">
-        <h2 className="mb-2">掲載方針</h2>
+      <section className="mb-12">
+        <h2 className="mb-4">掲載方針</h2>
         <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
           <li>記載のない項目は推測で補完せず、「{NO_DATA}」と表示しています。</li>
           <li>公式URLまたは定員のいずれかが記載されている施設のページのみを、検索エンジンへの登録対象としています。情報量の少ないページを大量に登録することを避けるためです。</li>

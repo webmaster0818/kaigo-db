@@ -97,23 +97,23 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
         />
       ) : (
         <>
-          <dl className="mb-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+          <dl className="stat-row mb-6">
             <div>
-              <dt className="text-xs text-muted">この条件の掲載施設</dt>
-              <dd className="tabular-nums text-lg font-bold">{stats.total.toLocaleString()}</dd>
+              <dt>この条件の掲載施設</dt>
+              <dd className="tabular-nums">{stats.total.toLocaleString()}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">うち定員の記載あり（並べ替えの対象）</dt>
-              <dd className="tabular-nums text-lg font-bold">
+              <dt>うち定員の記載あり（並べ替えの対象）</dt>
+              <dd className="tabular-nums">
                 {stats.with_capacity.toLocaleString()}
-                {rate && <span className="ml-2 text-xs font-normal text-muted">{rate}%</span>}
+                {rate && <span className="ml-2 font-sans text-xs font-normal text-muted">{rate}%</span>}
               </dd>
             </div>
           </dl>
 
           {/* ---- PC: 表 ---- */}
-          <div className="hidden md:block">
-            <table className="w-full border-collapse text-sm">
+          <div className="card hidden md:block">
+            <table className="dtable w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-muted">
                   <th scope="col" className="w-12 py-2 pr-3 text-right font-medium">順位</th>
@@ -164,9 +164,9 @@ export default async function CapacityRanking({ searchParams }: { searchParams: 
           </div>
 
           {/* ---- スマホ: カード ---- */}
-          <ul className="space-y-2 md:hidden">
+          <ul className="space-y-3 md:hidden">
             {rows.map((f, i) => (
-              <li key={f.id} className="card p-3">
+              <li key={f.id} className="card p-4">
                 <div className="flex items-baseline gap-2">
                   <span className="tabular-nums text-xs text-muted">{i + 1}</span>
                   <Link href={`/facility/${seg(f.id)}/`} className="font-medium underline-offset-2 hover:underline">

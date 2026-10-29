@@ -86,36 +86,36 @@ export default async function CityPage({
           { name: cityName },
         ]}
       />
-      <h1 className="mb-3">{prefName}{cityName}の介護施設・事業所</h1>
+      <h1 className="mb-6">{prefName}{cityName}の介護施設・事業所</h1>
 
       {rows.length === 0 ? (
         <EmptyState detail={`${prefName}${cityName}のデータは現在掲載しておりません。公開までしばらくお待ちください。`} />
       ) : (
         <>
-          <dl className="mb-5 flex flex-wrap gap-x-8 gap-y-2 border-y border-line py-3 text-sm">
+          <dl className="stat-row mb-6">
             <div>
-              <dt className="text-xs text-muted">掲載施設</dt>
-              <dd className="tabular-nums text-lg font-bold">{(area?.facility_count ?? rows.length).toLocaleString()}</dd>
+              <dt>掲載施設</dt>
+              <dd className="tabular-nums">{(area?.facility_count ?? rows.length).toLocaleString()}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">定員の記載あり</dt>
-              <dd className="tabular-nums text-lg font-bold">{withCapacity.toLocaleString()}</dd>
+              <dt>定員の記載あり</dt>
+              <dd className="tabular-nums">{withCapacity.toLocaleString()}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">公式URLあり</dt>
-              <dd className="tabular-nums text-lg font-bold">{withUrl.toLocaleString()}</dd>
+              <dt>公式URLあり</dt>
+              <dd className="tabular-nums">{withUrl.toLocaleString()}</dd>
             </div>
           </dl>
 
           {typeList.length > 1 && (
-            <ul className="mb-5 flex flex-wrap gap-2 text-xs">
+            <ul className="mb-6 flex flex-wrap gap-2">
               {typeList.map((t) => (
                 <li key={t.slug}>
                   <Link
                     href={`/type/${seg(t.slug)}/`}
-                    className="inline-flex items-baseline gap-1 card px-2 py-1 hover:border-accent hover:text-accent"
+                    className="chip"
                   >
-                    {t.name}<span className="tabular-nums text-muted">{t.n}</span>
+                    {t.name}<span className="chip-count">{t.n}</span>
                   </Link>
                 </li>
               ))}
@@ -123,20 +123,20 @@ export default async function CityPage({
           )}
 
           {/* ---- 並べ替え ---- */}
-          <form method="get" className="mb-3 flex flex-wrap items-end gap-2 border-y border-line py-2">
-            <label className="block text-xs">
-              <span className="text-muted">並べ替え</span>
+          <form method="get" className="card mb-4 flex flex-wrap items-center gap-3 px-4 py-3">
+            <label className="flex items-center gap-3 text-xs">
+              <span className="font-bold tracking-wider text-ink">並べ替え</span>
               <select
                 name="sort"
                 defaultValue={sort}
-                className="ml-2 rounded-lg border border-line-strong bg-surface px-2 py-1 text-sm"
+                className="field w-auto"
               >
                 <option value="default">種別順（住まい→在宅）</option>
                 <option value="capacity">定員が多い順</option>
                 <option value="name">事業所名順</option>
               </select>
             </label>
-            <button type="submit" className="rounded-lg border border-line-strong px-3 py-1 text-xs hover:bg-tint">
+            <button type="submit" className="btn-secondary">
               並べ替える
             </button>
             <span className="text-xs text-muted">
@@ -145,7 +145,7 @@ export default async function CityPage({
               をご利用ください。
             </span>
           </form>
-          <p className="mb-3 text-xs leading-relaxed text-muted">
+          <p className="mb-4 text-xs leading-relaxed text-muted">
             {SORT_BASIS[sort]}
             <span className="ml-1 font-bold text-ink">{NOT_A_RECOMMENDATION}</span>
           </p>

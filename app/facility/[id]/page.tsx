@@ -62,8 +62,8 @@ function facilityJsonLd(f: Facility) {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-1 gap-0.5 border-b border-line py-2 sm:grid-cols-[9rem_1fr] sm:gap-3">
-      <dt className="text-xs text-muted sm:pt-0.5">{label}</dt>
+    <div className="grid grid-cols-1 gap-1 border-b border-line px-4 py-3.5 last:border-0 sm:grid-cols-[10rem_1fr] sm:gap-4 sm:px-6">
+      <dt className="text-xs tracking-wider text-muted sm:pt-0.5">{label}</dt>
       <dd className="text-sm break-words">{children}</dd>
     </div>
   );
@@ -99,10 +99,10 @@ export default async function FacilityPage({ params }: { params: Params }) {
         ]}
       />
 
-      <p className="text-xs text-muted">{f.service_type}</p>
-      <h1 className="mb-4">{f.name}</h1>
+      <p className="eyebrow">{f.service_type}</p>
+      <h1 className="mt-3 mb-8">{f.name}</h1>
 
-      <dl className="mb-6 border-t border-line">
+      <dl className="card mb-8">
         <Row label="サービス種別">
           <Link href={`/type/${seg(f.service_type_slug)}/`} className="text-accent hover:underline">
             {f.service_type}
@@ -181,15 +181,15 @@ export default async function FacilityPage({ params }: { params: Params }) {
       </dl>
 
       {!indexable && (
-        <p className="mb-6 note px-3 py-2 text-xs text-muted">
+        <p className="mb-8 note px-4 py-3 text-xs text-muted">
           この施設は公表データに定員・公式URLの記載がないため、掲載している項目が限られています
           （当サイトの方針により検索エンジンには登録していません）。
         </p>
       )}
 
       {neighbors.length > 0 && (
-        <section className="mb-6">
-          <h2 className="mb-3">
+        <section className="reveal mb-6">
+          <h2 className="mb-4">
             同じ{f.city ?? "市区町村"}の施設
             <span className="ml-2 text-xs font-normal text-muted">{neighbors.length}件</span>
           </h2>

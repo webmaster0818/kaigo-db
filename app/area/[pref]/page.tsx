@@ -47,8 +47,8 @@ export default async function PrefPage({ params }: { params: Params }) {
           { name: prefName },
         ]}
       />
-      <h1 className="mb-2">{prefName}の介護施設・事業所</h1>
-      <p className="mb-5 text-sm text-muted">
+      <h1 className="mb-3">{prefName}の介護施設・事業所</h1>
+      <p className="mb-8 text-sm text-muted">
         {total > 0
           ? <>掲載 <span className="tabular-nums">{total.toLocaleString()}</span> 件／{cities.length} 市区町村</>
           : "この都道府県のデータは現在掲載しておりません。"}
@@ -57,13 +57,13 @@ export default async function PrefPage({ params }: { params: Params }) {
       {total === 0 ? (
         <EmptyState />
       ) : (
-        <ul className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {cities.map((c) => (
-            <li key={c.city_slug} className="flex items-baseline justify-between border-b border-line py-1">
-              <Link href={`/area/${seg(pref)}/${seg(c.city_slug)}/`} className="hover:text-accent hover:underline">
+            <li key={c.city_slug} className="reveal">
+              <Link href={`/area/${seg(pref)}/${seg(c.city_slug)}/`} className="chip h-full w-full">
                 {c.city}
+                <span className="chip-count">{c.facility_count.toLocaleString()}</span>
               </Link>
-              <span className="tabular-nums text-xs text-muted">{c.facility_count.toLocaleString()}</span>
             </li>
           ))}
         </ul>

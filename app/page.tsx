@@ -11,6 +11,8 @@ import PlaceSearchForm from "@/components/PlaceSearchForm";
 import FacilityTable from "@/components/FacilityTable";
 import EmptyState from "@/components/EmptyState";
 import SourceNote from "@/components/SourceNote";
+import HeroVisual from "@/components/HeroVisual";
+import Icon, { type IconName } from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -40,28 +42,26 @@ function matchNote(hit: PlaceHit, input: string): string {
 
 function StatCard({ label, value, unit, note }: { label: string; value: string; unit?: string; note?: string }) {
   return (
-    <div className="rounded-xl bg-tint px-3 py-3">
-      <dt className="text-[11px] text-muted">{label}</dt>
-      <dd className="mt-0.5 text-xl font-bold leading-none tabular-nums text-ink">
+    <div className="bg-surface px-4 py-5 md:px-6 md:py-6">
+      <dt className="text-xs tracking-wider text-muted">{label}</dt>
+      <dd className="mt-2 font-display text-2xl leading-none tabular-nums text-ink md:text-[1.9rem]">
         {value}
-        {unit && <span className="ml-0.5 text-xs font-normal text-muted">{unit}</span>}
+        {unit && <span className="ml-1 font-sans text-xs text-muted">{unit}</span>}
       </dd>
-      {note && <p className="mt-1.5 text-[11px] leading-tight text-muted-2">{note}</p>}
+      {note && <p className="mt-2.5 text-[11px] leading-snug text-muted-2">{note}</p>}
     </div>
   );
 }
 
-function SectionHeading({ icon, title, lead }: { icon?: string; title: string; lead?: string }) {
+function SectionHeading({ icon, title, lead }: { icon?: IconName; title: string; lead?: string }) {
   return (
-    <>
-      <h2 className="flex items-center gap-2.5">
-        {icon && (
-          <img src={icon} alt="" aria-hidden width={40} height={40} className="h-10 w-10 shrink-0 rounded-lg" />
-        )}
+    <div className="mb-6 border-t border-line-strong pt-8 md:pt-10">
+      <h2 className="flex items-center gap-4">
+        {icon && <Icon name={icon} size={52} />}
         {title}
       </h2>
-      {lead && <p className="mt-2 mb-4 max-w-3xl text-sm leading-relaxed text-muted">{lead}</p>}
-    </>
+      {lead && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted">{lead}</p>}
+    </div>
   );
 }
 
@@ -69,21 +69,21 @@ function SectionHeading({ icon, title, lead }: { icon?: string; title: string; l
 const ENTRANCES = [
   {
     href: "#search",
-    icon: "/img/icon-distance.webp",
+    icon: "distance" as IconName,
     title: "住所・現在地から探す",
     body: "入力した住所から近い順に施設を表示します。距離は直線距離であり、道のりではありません。",
     cta: "検索フォーム",
   },
   {
     href: "/type/",
-    icon: "/img/icon-type.webp",
+    icon: "type" as IconName,
     title: "サービス種別から探す",
     body: "特養・老健・グループホーム・有料老人ホームの4種別を掲載しています。種別ごとの費用の考え方や入居条件の違いもまとめています。",
     cta: "種別一覧",
   },
   {
     href: "/hojin/",
-    icon: "/img/icon-hojin.webp",
+    icon: "hojin" as IconName,
     title: "運営法人から探す",
     body: "同じ法人が運営する施設をまとめて確認できます。法人の同一性は、法人名ではなく法人番号（13桁）で判定しています。",
     cta: "法人一覧",
@@ -166,33 +166,25 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       {/* =====================================================================
           01 ファーストビュー（見出し＋イラスト＋検索フォーム）
           ===================================================================== */}
-      <section>
-        <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      <section className="pt-2 md:pt-6">
+        <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-4">
           <div>
             <span className="eyebrow">厚生労働省の公表データにもとづく施設情報</span>
-            <h1 className="mt-3 mb-3">
+            <h1 className="mt-5 mb-5 text-[2rem] leading-[1.4] md:text-[2.75rem]">
               公表データにもとづく
               <br />
               介護施設の検索
             </h1>
-            <p className="max-w-xl text-sm leading-relaxed text-muted">
+            <p className="max-w-xl text-sm leading-[2] text-muted">
               全国{total > 0 ? total.toLocaleString() : ""}件の介護施設を、住所からの距離・市区町村・サービス種別・運営法人で検索できるデータベースです。
               公表データに記載のない項目は「記載なし」と表示し、推測による補完は行っていません。口コミ・独自の★評価・おすすめ順は掲載していません。
             </p>
           </div>
-          {/* 装飾用イラスト。施設や入居者の実写ではないことが見て分かる絵柄にしている */}
-          <img
-            src="/img/hero.webp"
-            alt=""
-            aria-hidden
-            fetchPriority="high"
-            width={1100}
-            height={613}
-            className="w-full rounded-2xl"
-          />
+          {/* 装飾用の画像。差し替えは components/HeroVisual.tsx */}
+          <HeroVisual />
         </div>
 
-        <div id="search" className="mt-6 scroll-mt-20">
+        <div id="search" className="mt-8 scroll-mt-24 md:mt-6">
           <PlaceSearchForm
             types={types}
             defaults={{ q: qRaw, lat: latRaw, lng: lngRaw, radius: radiusRaw, type: typeRaw, sort }}
@@ -202,7 +194,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
 
       {/* ---- 検索結果 ---- */}
       {searched && (
-        <section className="mt-8">
+        <section className="mt-12">
           <h2 className="mb-2">
             検索結果
             {origin && (
@@ -231,10 +223,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                       <li key={s.key}>
                         <Link
                           href={`/?q=${encodeURIComponent(s.name)}&radius=${radius}`}
-                          className="inline-block rounded-full border border-line bg-tint px-3 py-1 hover:border-accent hover:text-accent"
+                          className="chip"
                         >
                           {s.name}
-                          <span className="ml-1 tabular-nums text-muted-2">{s.facility_count.toLocaleString()}件</span>
+                          <span className="chip-count">{s.facility_count.toLocaleString()}件</span>
                         </Link>
                       </li>
                     ))}
@@ -280,70 +272,47 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       )}
 
       {/* =====================================================================
-          02 3つの入口
-          ===================================================================== */}
-      <section className="mt-12">
-        <h2 className="mb-4">3つの検索方法</h2>
-        <ul className="grid gap-3 md:grid-cols-3">
-          {ENTRANCES.map((e) => (
-            <li key={e.href}>
-              <Link href={e.href} className="card card-link flex h-full flex-col p-5">
-                <img src={e.icon} alt="" aria-hidden width={56} height={56} className="h-14 w-14 rounded-xl" />
-                <span className="mt-3 text-[15px] font-bold leading-snug">{e.title}</span>
-                <span className="mt-1.5 flex-1 text-xs leading-relaxed text-muted">{e.body}</span>
-                <span className="mt-3 text-xs font-bold text-accent">{e.cta} →</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* =====================================================================
-          03 このデータベースの規模（実績バッジではなく、数えた事実）
-          ===================================================================== */}
-      {total > 0 && (
-        <section className="mt-10">
-          <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <StatCard label="掲載施設数" value={total.toLocaleString()} unit="件" note="特養・老健・グループホーム・有料老人ホーム" />
-            <StatCard label="掲載市区町村数" value={stats.cities.toLocaleString()} unit="市区町村" note={`うち3件以上の市区町村は${stats.cities3.toLocaleString()}`} />
-            <StatCard label="運営法人数" value={stats.corporations.toLocaleString()} unit="法人" note="法人番号（13桁）で同一法人を判定した数" />
-            <StatCard label="データ取得日" value={meta.acquired_on ?? "-"} note={meta.imported_at ? `取り込み ${meta.imported_at}` : undefined} />
-          </dl>
-        </section>
-      )}
-
-      {/* =====================================================================
-          04 エリアから探す（地方 → 都道府県 → 市区町村）
+          02 エリアから探す（地方 → 都道府県 → 市区町村）
+          検索フォームの直後に置く。都道府県を選ぶと /area/<pref>/ の市区町村一覧へ、そこから施設一覧へ進む。
           ===================================================================== */}
       {prefs.length > 0 && (
-        <section className="mt-12">
+        <section id="area" className="mt-16 scroll-mt-24 md:mt-20">
           <SectionHeading
-            icon="/img/icon-area.webp"
+            icon="area"
             title="エリアから探す"
             lead={`地方、都道府県、市区町村の順に絞り込むことができます。掲載範囲は${stats.prefs}都道府県・${stats.cities.toLocaleString()}市区町村です。数字は各都道府県の掲載件数です。`}
           />
-          <div className="grid gap-3 md:grid-cols-2">
+          <ol className="steps reveal mb-6" aria-label="エリアから探す手順">
+            <li><span className="step-no">1</span>都道府県を選ぶ</li>
+            <li><span className="step-no">2</span>市区町村を選ぶ</li>
+            <li><span className="step-no">3</span>施設の一覧を見る</li>
+          </ol>
+          <div className="grid gap-4 md:grid-cols-2">
             {REGIONS.map((region) => {
               const items = region.prefs.map((name) => {
                 const slug = PREF_SLUGS[name];
                 return { name, slug, n: Number(prefBySlug.get(slug)?.facility_count ?? 0) };
               });
               return (
-                <div key={region.name} className="card p-4">
-                  <h3 className="mb-2 border-b border-line pb-1.5 text-accent">{region.name}</h3>
-                  <ul className="grid grid-cols-2 gap-x-4 text-sm sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
+                <div key={region.name} className="card reveal p-5">
+                  <h3 className="mb-3 flex items-center gap-3 text-[15px] tracking-wider text-ink">
+                    {region.name}
+                    <span aria-hidden className="h-px flex-1 bg-line" />
+                  </h3>
+                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
                     {items.map((p) => (
-                      <li key={p.slug} className="flex items-baseline justify-between gap-1 py-1">
+                      <li key={p.slug}>
                         {p.n > 0 ? (
-                          <Link href={`/area/${p.slug}/`} className="hover:text-accent hover:underline">
+                          <Link href={`/area/${p.slug}/`} className="chip w-full">
                             {p.name.replace(/[都府県]$/, "")}
+                            <span className="chip-count">{p.n.toLocaleString()}</span>
                           </Link>
                         ) : (
-                          <span className="text-muted-2">{p.name.replace(/[都府県]$/, "")}</span>
+                          <span className="chip chip-disabled w-full">
+                            {p.name.replace(/[都府県]$/, "")}
+                            <span className="chip-count">-</span>
+                          </span>
                         )}
-                        <span className="tabular-nums text-[11px] text-muted-2">
-                          {p.n > 0 ? p.n.toLocaleString() : "-"}
-                        </span>
                       </li>
                     ))}
                   </ul>
@@ -353,27 +322,59 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           </div>
 
           {topAreas.length > 0 && (
-            <>
-              <h3 className="mt-6 mb-2 text-muted">掲載件数の多い市区町村</h3>
-              <ul className="flex flex-wrap gap-2 text-sm">
+            <div className="reveal">
+              <h3 className="mt-10 mb-3 text-muted">掲載件数の多い市区町村</h3>
+              <ul className="flex flex-wrap gap-2">
                 {topAreas.map((a) => (
                   <li key={`${a.pref_slug}-${a.city_slug}`}>
-                    <Link
-                      href={`/area/${seg(a.pref_slug)}/${seg(a.city_slug)}/`}
-                      className="inline-block rounded-full border border-line bg-surface px-3.5 py-1.5 hover:border-accent hover:text-accent"
-                    >
+                    <Link href={`/area/${seg(a.pref_slug)}/${seg(a.city_slug)}/`} className="chip">
                       {a.prefecture}{a.city}
-                      <span className="ml-1.5 tabular-nums text-xs text-muted-2">{a.facility_count.toLocaleString()}</span>
+                      <span className="chip-count">{a.facility_count.toLocaleString()}</span>
                     </Link>
                   </li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
 
-          <p className="mt-4 text-xs">
-            <Link href="/area/" className="font-bold text-accent hover:underline">都道府県一覧 →</Link>
+          <p className="mt-6">
+            <Link href="/area/" className="btn-secondary">都道府県一覧 →</Link>
           </p>
+        </section>
+      )}
+
+      {/* =====================================================================
+          03 3つの入口
+          ===================================================================== */}
+      <section className="mt-16 md:mt-20">
+        <div className="mb-6 border-t border-line-strong pt-8 md:pt-10">
+          <h2>3つの検索方法</h2>
+        </div>
+        <ul className="grid gap-4 md:grid-cols-3">
+          {ENTRANCES.map((e) => (
+            <li key={e.href} className="reveal">
+              <Link href={e.href} className="card card-link flex h-full flex-col p-6 md:p-7">
+                <Icon name={e.icon} size={64} />
+                <span className="mt-5 text-base font-bold leading-snug">{e.title}</span>
+                <span className="mt-2 flex-1 text-[13px] leading-relaxed text-muted">{e.body}</span>
+                <span className="mt-5 border-t border-line pt-4 text-[13px] font-bold tracking-wider text-accent">{e.cta} →</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* =====================================================================
+          04 このデータベースの規模（実績バッジではなく、数えた事実）
+          ===================================================================== */}
+      {total > 0 && (
+        <section className="reveal mt-12">
+          <dl className="grid grid-cols-2 gap-px border border-line-strong bg-line-strong lg:grid-cols-4">
+            <StatCard label="掲載施設数" value={total.toLocaleString()} unit="件" note="特養・老健・グループホーム・有料老人ホーム" />
+            <StatCard label="掲載市区町村数" value={stats.cities.toLocaleString()} unit="市区町村" note={`うち3件以上の市区町村は${stats.cities3.toLocaleString()}`} />
+            <StatCard label="運営法人数" value={stats.corporations.toLocaleString()} unit="法人" note="法人番号（13桁）で同一法人を判定した数" />
+            <StatCard label="データ取得日" value={meta.acquired_on ?? "-"} note={meta.imported_at ? `取り込み ${meta.imported_at}` : undefined} />
+          </dl>
         </section>
       )}
 
@@ -381,35 +382,33 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           05 種別から探す
           ===================================================================== */}
       {types.length > 0 && (
-        <section className="mt-12">
+        <section className="mt-16 md:mt-20">
           <SectionHeading
-            icon="/img/icon-type.webp"
+            icon="type"
             title="サービス種別から探す"
             lead="当サイトの掲載対象は、住まいとして利用する入居系の4種別です。入居条件や費用の仕組みは種別ごとに異なります。"
           />
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[...residential, ...otherTypes].map((t) => {
               const g = TYPE_GUIDES[t.service_type_slug];
               return (
-                <li key={t.service_type_slug}>
+                <li key={t.service_type_slug} className="reveal">
                   <Link
                     href={`/type/${seg(t.service_type_slug)}/`}
-                    className="card card-link flex h-full flex-col px-4 py-4"
+                    className="card card-link flex h-full flex-col p-6"
                   >
-                    {g && (
-                      <img src={g.icon} alt="" aria-hidden width={56} height={56} className="h-14 w-14 rounded-xl" />
-                    )}
-                    <span className="mt-2.5 text-sm font-bold leading-snug">{g?.short ?? t.service_type}</span>
-                    <span className="mt-auto pt-3 tabular-nums text-2xl font-bold text-accent">
+                    {g && <Icon name={g.icon} size={64} />}
+                    <span className="mt-4 mb-5 text-sm font-bold leading-snug">{g?.short ?? t.service_type}</span>
+                    <span className="mt-auto border-t border-line pt-4 font-display text-[1.75rem] leading-none tabular-nums text-ink">
                       {t.facility_count.toLocaleString()}
-                      <span className="ml-0.5 text-xs font-normal text-muted">件</span>
+                      <span className="ml-1 font-sans text-xs text-muted">件</span>
                     </span>
                   </Link>
                 </li>
               );
             })}
           </ul>
-          <p className="mt-3 text-[11px] leading-relaxed text-muted-2">{TYPE_GUIDE_CAVEAT}</p>
+          <p className="mt-4 text-[11px] leading-relaxed text-muted-2">{TYPE_GUIDE_CAVEAT}</p>
         </section>
       )}
 
@@ -417,40 +416,40 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           06 運営法人から探す（このサイトの主役）
           ===================================================================== */}
       {topCorps.length > 0 && (
-        <section className="mt-12">
+        <section className="mt-16 md:mt-20">
           <SectionHeading
-            icon="/img/icon-hojin.webp"
+            icon="hojin"
             title="運営法人から探す"
             lead="運営方針や人員配置は、運営法人ごとに異なります。法人の同一性は法人名ではなく法人番号（13桁）で判定しているため、「社会福祉法人札幌慈啓会」と「社会福祉法人　札幌慈啓会」のような表記の違いがあっても、同一の法人として集計しています。"
           />
-          <div className="card overflow-x-auto p-1">
+          <div className="card reveal overflow-x-auto">
             <table className="w-full min-w-[520px] border-collapse text-sm">
               <caption className="sr-only">掲載施設数の多い運営法人 上位{topCorps.length}法人</caption>
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-muted">
-                  <th scope="col" className="w-10 py-2.5 pl-3 pr-2 text-right font-medium">#</th>
-                  <th scope="col" className="py-2.5 pr-3 font-medium">運営法人</th>
-                  <th scope="col" className="w-24 py-2.5 pr-3 text-right font-medium">施設数</th>
-                  <th scope="col" className="w-28 py-2.5 pr-3 text-right font-medium">展開都道府県</th>
+                  <th scope="col" className="w-12 py-3 pl-4 pr-2 text-right font-medium">#</th>
+                  <th scope="col" className="py-3 pr-3 font-medium">運営法人</th>
+                  <th scope="col" className="w-24 py-3 pr-3 text-right font-medium">施設数</th>
+                  <th scope="col" className="w-28 py-3 pr-4 text-right font-medium">展開都道府県</th>
                 </tr>
               </thead>
               <tbody>
                 {topCorps.map((c, i) => (
                   <tr key={c.slug} className="border-b border-line last:border-0 hover:bg-tint">
-                    <td className="py-2.5 pl-3 pr-2 text-right tabular-nums text-muted-2">{i + 1}</td>
-                    <td className="py-2.5 pr-3">
-                      <Link href={`/hojin/${seg(c.slug)}/`} className="font-medium text-ink underline-offset-2 hover:text-accent hover:underline">
+                    <td className="py-3 pl-4 pr-2 text-right tabular-nums text-muted-2">{i + 1}</td>
+                    <td className="py-3 pr-3">
+                      <Link href={`/hojin/${seg(c.slug)}/`} className="font-medium text-ink underline-offset-4 hover:text-accent hover:underline">
                         {c.name}
                       </Link>
                     </td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums">{c.facility_count.toLocaleString()}</td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums text-muted">{c.pref_count.toLocaleString()}</td>
+                    <td className="py-3 pr-3 text-right tabular-nums">{c.facility_count.toLocaleString()}</td>
+                    <td className="py-3 pr-4 text-right tabular-nums text-muted">{c.pref_count.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-muted">
+          <p className="mt-4 text-xs leading-relaxed text-muted">
             掲載している{stats.corporations.toLocaleString()}法人のうち、施設数の多い{topCorps.length}法人です。
             件数は当サイトに掲載している4種別（特養・老健・グループホーム・有料老人ホーム）の範囲での数であり、法人の規模を示すものではありません。
             全法人は{" "}
@@ -463,27 +462,28 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       {/* =====================================================================
           07 ファクト別の並べ替え
           ===================================================================== */}
-      <section className="mt-12">
+      <section className="mt-16 md:mt-20">
         <SectionHeading
+          icon="sort"
           title="公表データの項目別の並べ替え"
           lead="公表データの単一の項目の値にもとづいて並べ替えた一覧です。複数の項目を重み付けして合成した総合ランキングや、おすすめ順・★評価は作成していません。"
         />
-        <p className="note mb-3 px-4 py-3 text-sm font-bold">{NOT_A_RECOMMENDATION}</p>
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <p className="note reveal mb-4 px-5 py-4 text-sm font-bold">{NOT_A_RECOMMENDATION}</p>
+        <ul className="grid gap-4 sm:grid-cols-2">
           {RANKING_AXES.map((a) =>
             // 距離の軸はこのページの検索フォームそのもの。自分自身へのリンクは張らない。
             a.href === "/" ? (
-              <li key={a.href} className="rounded-xl border border-dashed border-line-strong bg-tint px-4 py-4">
+              <li key={a.href} className="reveal border border-dashed border-line-strong px-5 py-5">
                 <span className="text-sm font-bold text-ink">{a.label}</span>
-                <span className="mt-1 block text-xs leading-relaxed text-muted">
+                <span className="mt-1.5 block text-xs leading-relaxed text-muted">
                   {a.basis}このページ上部の検索フォームで、この順序による検索ができます。
                 </span>
               </li>
             ) : (
-              <li key={a.href}>
-                <Link href={a.href} className="card card-link block h-full px-4 py-4">
+              <li key={a.href} className="reveal">
+                <Link href={a.href} className="card card-link block h-full px-5 py-5">
                   <span className="text-sm font-bold text-accent">{a.label}</span>
-                  <span className="mt-1 block text-xs leading-relaxed text-muted">{a.basis}</span>
+                  <span className="mt-1.5 block text-xs leading-relaxed text-muted">{a.basis}</span>
                 </Link>
               </li>
             ),
@@ -495,19 +495,19 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           08 このサイトのデータについて
           ===================================================================== */}
       {total > 0 && (
-        <section className="mt-12">
+        <section className="mt-16 md:mt-20">
           <SectionHeading
-            icon="/img/icon-data.webp"
+            icon="data"
             title="当サイトの掲載データについて"
             lead="項目ごとの記載の割合（充足率）を公開しています。記載のない項目は推測で補完せず、「記載なし」と表示しています。"
           />
-          <div className="card overflow-x-auto p-1">
+          <div className="card reveal overflow-x-auto">
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-muted">
-                  <th scope="col" className="py-2.5 pl-3 pr-3 font-medium">項目</th>
-                  <th scope="col" className="w-28 py-2.5 pr-3 text-right font-medium">記載あり</th>
-                  <th scope="col" className="w-20 py-2.5 pr-3 text-right font-medium">充足率</th>
+                  <th scope="col" className="py-3 pl-4 pr-3 font-medium">項目</th>
+                  <th scope="col" className="w-28 py-3 pr-3 text-right font-medium">記載あり</th>
+                  <th scope="col" className="w-20 py-3 pr-4 text-right font-medium">充足率</th>
                 </tr>
               </thead>
               <tbody>
@@ -518,20 +518,19 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   ["定員（1人以上の記載）", covCapacity],
                 ].map(([label, n]) => (
                   <tr key={label as string} className="border-b border-line last:border-0">
-                    <td className="py-2.5 pl-3 pr-3">{label as string}</td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums">{(n as number).toLocaleString()}</td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums">{pct(n as number)}</td>
+                    <td className="py-3 pl-4 pr-3">{label as string}</td>
+                    <td className="py-3 pr-3 text-right tabular-nums">{(n as number).toLocaleString()}</td>
+                    <td className="py-3 pr-4 text-right tabular-nums">{pct(n as number)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs">
-            <Link href="/data/" className="font-bold text-accent hover:underline">全項目の充足率と掲載方針 →</Link>
+          <p className="mt-6">
+            <Link href="/data/" className="btn-secondary">全項目の充足率と掲載方針 →</Link>
           </p>
         </section>
       )}
-
       {/* =====================================================================
           09 出典
           ===================================================================== */}

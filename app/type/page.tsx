@@ -6,6 +6,7 @@ import { TYPE_GUIDES, TYPE_GUIDE_CAVEAT } from "@/lib/typeGuide";
 import Breadcrumb from "@/components/Breadcrumb";
 import SourceNote from "@/components/SourceNote";
 import EmptyState from "@/components/EmptyState";
+import Icon from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,8 @@ export default async function TypeIndex() {
   return (
     <main>
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "サービス種別から探す" }]} />
-      <h1 className="mb-2">サービス種別から探す</h1>
-      <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted">
+      <h1 className="mb-3">サービス種別から探す</h1>
+      <p className="mb-10 max-w-3xl text-sm leading-relaxed text-muted">
         住まいとして利用する入居系の4種別は、対象となる要介護度、運営主体、費用の仕組みがそれぞれ異なります。
         種別の違いを確認したうえで、エリアや距離で絞り込むと、施設を探しやすくなります。
       </p>
@@ -36,27 +37,18 @@ export default async function TypeIndex() {
         <>
           {residential.length > 0 && (
             <section className="mb-10">
-              <h2 className="mb-4">住まい（入居系）</h2>
-              <ul className="grid gap-3 sm:grid-cols-2">
+              <h2 className="mb-5">住まい（入居系）</h2>
+              <ul className="grid gap-4 sm:grid-cols-2">
                 {residential.map((t) => {
                   const g = TYPE_GUIDES[t.service_type_slug];
                   return (
-                    <li key={t.service_type_slug}>
+                    <li key={t.service_type_slug} className="reveal">
                       <Link
                         href={`/type/${seg(t.service_type_slug)}/`}
-                        className="card card-link flex h-full flex-col p-5"
+                        className="card card-link flex h-full flex-col p-6"
                       >
-                        <div className="flex items-start gap-3">
-                          {g && (
-                            <img
-                              src={g.icon}
-                              alt=""
-                              aria-hidden
-                              width={64}
-                              height={64}
-                              className="h-16 w-16 shrink-0 rounded-xl"
-                            />
-                          )}
+                        <div className="flex items-start gap-4">
+                          {g && <Icon name={g.icon} size={64} />}
                           <div className="min-w-0">
                             <span className="block text-[15px] font-bold leading-snug">
                               {g?.short ?? t.service_type}
@@ -66,17 +58,17 @@ export default async function TypeIndex() {
                             </span>
                           </div>
                           <span className="ml-auto shrink-0 text-right">
-                            <span className="block tabular-nums text-xl font-bold text-accent">
+                            <span className="block font-display text-2xl leading-none tabular-nums text-ink">
                               {t.facility_count.toLocaleString()}
                             </span>
-                            <span className="block text-[11px] text-muted">件</span>
+                            <span className="mt-1 block text-[11px] text-muted">件</span>
                           </span>
                         </div>
 
                         {g && (
                           <>
-                            <p className="mt-3 text-xs leading-relaxed text-muted">{g.summary}</p>
-                            <dl className="mt-3 space-y-1 border-t border-line pt-3 text-[11px] leading-relaxed">
+                            <p className="mt-4 text-xs leading-relaxed text-muted">{g.summary}</p>
+                            <dl className="mt-4 space-y-1 border-t border-line pt-4 text-[11px] leading-relaxed">
                               <div className="flex gap-2">
                                 <dt className="w-16 shrink-0 text-muted-2">対象</dt>
                                 <dd className="text-muted">{g.target}</dd>
@@ -89,7 +81,7 @@ export default async function TypeIndex() {
                           </>
                         )}
 
-                        <span className="mt-3 text-xs font-bold text-accent">この種別の施設一覧 →</span>
+                        <span className="mt-5 border-t border-line pt-4 text-[13px] font-bold tracking-wider text-accent">この種別の施設一覧 →</span>
                       </Link>
                     </li>
                   );
@@ -107,10 +99,10 @@ export default async function TypeIndex() {
                   <li key={t.service_type_slug}>
                     <Link
                       href={`/type/${seg(t.service_type_slug)}/`}
-                      className="inline-block rounded-full border border-line bg-surface px-3.5 py-1.5 hover:border-accent hover:text-accent"
+                      className="chip"
                     >
                       {t.service_type}
-                      <span className="ml-1.5 tabular-nums text-xs text-muted-2">
+                      <span className="chip-count">
                         {t.facility_count.toLocaleString()}
                       </span>
                     </Link>

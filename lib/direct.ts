@@ -147,16 +147,16 @@ function head(shell: DirectShell, m: { title: string; description: string; robot
 
 function siteHeader(): string {
   return (
-    `<header class="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur">` +
-    `<div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">` +
+    `<header class="sticky top-0 z-20 border-b border-line-strong bg-paper/95 backdrop-blur">` +
+    `<div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:py-4">` +
     link(
       "/",
-      "flex items-baseline gap-2",
-      `<span class="text-lg font-bold tracking-tight text-accent">${esc(SITE_NAME)}</span>` +
-        `<span class="text-[11px] font-normal text-muted">${esc(SITE_TAGLINE)}</span>`,
+      "flex items-baseline gap-3",
+      `<span class="font-display text-xl font-semibold tracking-wider text-ink">${esc(SITE_NAME)}</span>` +
+        `<span class="text-[11px] tracking-wider text-muted">${esc(SITE_TAGLINE)}</span>`,
     ).s +
-    `<nav class="ml-auto"><ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs">` +
-    NAV.map((n) => `<li>${link(n.href, "text-muted hover:text-accent hover:underline", esc(n.label)).s}</li>`).join("") +
+    `<nav class="-mx-4 w-full overflow-x-auto px-4 md:mx-0 md:ml-auto md:w-auto md:px-0"><ul class="flex gap-x-5 whitespace-nowrap text-[13px] md:flex-wrap">` +
+    NAV.map((n) => `<li>${link(n.href, "text-muted underline-offset-4 hover:text-ink hover:underline", esc(n.label)).s}</li>`).join("") +
     `</ul></nav></div></header>`
   );
 }
@@ -174,11 +174,11 @@ function licenseAnchor(): Html {
 
 function footer(): string {
   return (
-    `<footer class="mt-16 border-t border-line bg-surface"><div class="mx-auto max-w-6xl px-4 py-8 text-xs text-muted">` +
-    `<ul class="flex flex-wrap gap-x-5 gap-y-2">` +
-    FOOTER_NAV.map((n) => `<li>${link(n.href, "hover:text-accent hover:underline", esc(n.label)).s}</li>`).join("") +
+    `<footer class="mt-24 border-t border-line-strong bg-surface"><div class="mx-auto max-w-6xl px-4 py-12 text-xs text-muted">` +
+    `<ul class="flex flex-wrap gap-x-6 gap-y-3 text-[13px]">` +
+    FOOTER_NAV.map((n) => `<li>${link(n.href, "underline-offset-4 hover:text-ink hover:underline", esc(n.label)).s}</li>`).join("") +
     `</ul>` +
-    `<p class="mt-5 leading-relaxed">` +
+    `<p class="mt-8 max-w-3xl border-t border-line pt-6 leading-relaxed">` +
     kids(
       "掲載情報は",
       " ",
@@ -189,7 +189,7 @@ function footer(): string {
       "）にもとづいています。口コミ・独自の評価・ランキングは掲載していません。 ご利用前に、各施設に最新の状況をご確認ください。",
     ) +
     `</p>` +
-    `<p class="mt-3 text-muted-2">${kids("© ", new Date().getFullYear(), " ", SITE_NAME)}</p>` +
+    `<p class="mt-4 tracking-wider text-muted-2">${kids("© ", new Date().getFullYear(), " ", SITE_NAME)}</p>` +
     `</div></footer>`
   );
 }
@@ -229,15 +229,15 @@ function breadcrumb(items: Crumb[]): string {
   };
   return (
     jsonLdScript(jsonLd) +
-    `<nav aria-label="パンくずリスト" class="mb-5"><ol class="flex flex-wrap items-center gap-1 text-xs text-muted">` +
+    `<nav aria-label="パンくずリスト" class="mb-8"><ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">` +
     items
       .map(
         (c, i) =>
-          `<li class="flex items-center gap-1">` +
+          `<li class="flex items-center gap-2">` +
           (c.href
-            ? link(c.href, "hover:text-accent hover:underline", kids(c.name)).s
+            ? link(c.href, "underline-offset-4 hover:text-ink hover:underline", kids(c.name)).s
             : `<span class="font-medium text-ink" aria-current="page">${kids(c.name)}</span>`) +
-          (i < items.length - 1 ? `<span class="text-line-strong">›</span>` : "") +
+          (i < items.length - 1 ? `<span class="text-muted-2">›</span>` : "") +
           `</li>`,
       )
       .join("") +
@@ -247,7 +247,7 @@ function breadcrumb(items: Crumb[]): string {
 
 function sourceNote(acquiredOn: string | null | undefined): string {
   return (
-    `<p class="mt-8 border-t border-line pt-3 text-[11px] leading-relaxed text-muted">` +
+    `<p class="mt-16 border-t border-line-strong pt-5 text-[11px] leading-relaxed text-muted">` +
     kids("出典：", sourceAnchor(), "（", licenseAnchor(), "）", acquiredOn ? `／取得日 ${acquiredOn}` : "／取得日 記載なし") +
     `<br/>当サイトは公表データをそのまま掲載しています。記載のない項目は「記載なし」と表示し、推測値による補完は行っていません。</p>`
   );
@@ -255,11 +255,11 @@ function sourceNote(acquiredOn: string | null | undefined): string {
 
 function facilityTable(rows: Facility[], opt: { hideCity?: boolean; hideCorp?: boolean }): string {
   if (rows.length === 0) {
-    return `<p class="card px-4 py-8 text-center text-sm text-muted">該当する施設はありません。</p>`;
+    return `<p class="card px-4 py-10 text-center text-sm text-muted">該当する施設はありません。</p>`;
   }
   const cap = (f: Facility) => (f.capacity == null ? noData : `${f.capacity}人`);
   let s =
-    `<div class="hidden md:block"><table class="w-full border-collapse text-sm"><thead>` +
+    `<div class="card hidden md:block"><table class="dtable w-full border-collapse text-sm"><thead>` +
     `<tr class="border-b border-line-strong text-left text-xs text-muted">` +
     `<th scope="col" class="py-2 pr-3 font-medium">事業所名</th>` +
     `<th scope="col" class="w-48 py-2 pr-3 font-medium">種別</th>` +
@@ -288,10 +288,10 @@ function facilityTable(rows: Facility[], opt: { hideCity?: boolean; hideCorp?: b
           }</td>`) +
       `</tr>`;
   }
-  s += `</tbody></table></div><ul class="space-y-2 md:hidden">`;
+  s += `</tbody></table></div><ul class="space-y-3 md:hidden">`;
   for (const f of rows) {
     s +=
-      `<li class="card p-3">` +
+      `<li class="card p-4">` +
       link(`/facility/${seg(f.id)}/`, "font-medium text-ink underline-offset-2 hover:underline", kids(f.name)).s +
       `<dl class="mt-2 grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-xs">` +
       `<dt class="text-muted">種別</dt><dd>${kids(f.service_type)}</dd>` +
@@ -447,8 +447,8 @@ function facilityJsonLd(f: Facility) {
 
 function row(label: string, children: string): string {
   return (
-    `<div class="grid grid-cols-1 gap-0.5 border-b border-line py-2 sm:grid-cols-[9rem_1fr] sm:gap-3">` +
-    `<dt class="text-xs text-muted sm:pt-0.5">${esc(label)}</dt><dd class="text-sm break-words">${children}</dd></div>`
+    `<div class="grid grid-cols-1 gap-1 border-b border-line px-4 py-3.5 last:border-0 sm:grid-cols-[10rem_1fr] sm:gap-4 sm:px-6">` +
+    `<dt class="text-xs tracking-wider text-muted sm:pt-0.5">${esc(label)}</dt><dd class="text-sm break-words">${children}</dd></div>`
   );
 }
 
@@ -490,9 +490,9 @@ export async function renderFacility(db: D1Database, id: string, shell: DirectSh
   let main =
     jsonLdScript(facilityJsonLd(f)) +
     breadcrumb(crumbs) +
-    `<p class="text-xs text-muted">${kids(f.service_type)}</p>` +
-    `<h1 class="mb-4">${kids(f.name)}</h1>` +
-    `<dl class="mb-6 border-t border-line">` +
+    `<p class="eyebrow">${kids(f.service_type)}</p>` +
+    `<h1 class="mt-3 mb-8">${kids(f.name)}</h1>` +
+    `<dl class="card mb-8">` +
     row("サービス種別", link(`/type/${seg(f.service_type_slug)}/`, "text-accent hover:underline", kids(f.service_type)).s) +
     row(
       "所在地",
@@ -527,12 +527,12 @@ export async function renderFacility(db: D1Database, id: string, shell: DirectSh
 
   if (!indexable) {
     main +=
-      `<p class="mb-6 note px-3 py-2 text-xs text-muted">この施設は公表データに定員・公式URLの記載がないため、掲載している項目が限られています （当サイトの方針により検索エンジンには登録していません）。</p>`;
+      `<p class="mb-8 note px-4 py-3 text-xs text-muted">この施設は公表データに定員・公式URLの記載がないため、掲載している項目が限られています （当サイトの方針により検索エンジンには登録していません）。</p>`;
   }
 
   if (neighbors.length > 0) {
     main +=
-      `<section class="mb-6"><h2 class="mb-3">${kids("同じ", f.city ?? "市区町村", "の施設", raw(`<span class="ml-2 text-xs font-normal text-muted">${kids(neighbors.length, "件")}</span>`))}</h2>` +
+      `<section class="reveal mb-6"><h2 class="mb-4">${kids("同じ", f.city ?? "市区町村", "の施設", raw(`<span class="ml-2 text-xs font-normal text-muted">${kids(neighbors.length, "件")}</span>`))}</h2>` +
       facilityTable(neighbors, { hideCity: true }) +
       (f.pref_slug && f.city_slug
         ? `<p class="mt-3 text-xs">${link(`/area/${seg(f.pref_slug)}/${seg(f.city_slug)}/`, "text-accent hover:underline", kids(f.prefecture, f.city, "の施設一覧 →")).s}</p>`
@@ -574,13 +574,13 @@ export async function renderHojin(db: D1Database, slug: string, shell: DirectShe
   for (const r of rows) types.set(r.service_type, (types.get(r.service_type) ?? 0) + 1);
 
   const stat = (label: string, value: string) =>
-    `<div><dt class="text-xs text-muted">${esc(label)}</dt><dd class="tabular-nums text-lg font-bold">${kids(value)}</dd></div>`;
+    `<div><dt>${esc(label)}</dt><dd class="tabular-nums">${kids(value)}</dd></div>`;
 
   let main =
     jsonLdScript(jsonLd) +
     breadcrumb([{ name: "ホーム", href: "/" }, { name: c.name }]) +
-    `<h1 class="mb-3">${kids(c.name, "が運営する介護事業所")}</h1>` +
-    `<dl class="mb-5 flex flex-wrap gap-x-8 gap-y-2 border-y border-line py-3 text-sm">` +
+    `<h1 class="mb-6">${kids(c.name, "が運営する介護事業所")}</h1>` +
+    `<dl class="stat-row mb-6">` +
     stat("施設数", c.facility_count.toLocaleString()) +
     stat("展開都道府県", c.pref_count.toLocaleString()) +
     stat("サービス種別", types.size.toLocaleString()) +

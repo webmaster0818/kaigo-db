@@ -12,17 +12,17 @@ const NAV = [
 
 export default function SiteHeader() {
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
-        <Link href="/" className="flex items-baseline gap-2">
-          <span className="text-lg font-bold tracking-tight text-accent">{SITE_NAME}</span>
-          <span className="text-[11px] font-normal text-muted">{SITE_TAGLINE}</span>
+    <header className="sticky top-0 z-20 border-b border-line-strong bg-paper/95 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:py-4">
+        <Link href="/" className="flex items-baseline gap-3">
+          <span className="font-display text-xl font-semibold tracking-wider text-ink">{SITE_NAME}</span>
+          <span className="text-[11px] tracking-wider text-muted">{SITE_TAGLINE}</span>
         </Link>
-        <nav className="ml-auto">
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <nav className="-mx-4 w-full overflow-x-auto px-4 md:mx-0 md:ml-auto md:w-auto md:px-0">
+          <ul className="flex gap-x-5 whitespace-nowrap text-[13px] md:flex-wrap">
             {NAV.map((n) => (
               <li key={n.href}>
-                <Link href={n.href} className="text-muted hover:text-accent hover:underline">
+                <Link href={n.href} className="text-muted underline-offset-4 hover:text-ink hover:underline">
                   {n.label}
                 </Link>
               </li>

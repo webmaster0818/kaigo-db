@@ -37,12 +37,12 @@ export default async function HojinIndex({
   return (
     <main>
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: "運営法人から探す" }]} />
-      <h1 className="mb-2">運営法人から探す</h1>
+      <h1 className="mb-3">運営法人から探す</h1>
       <p className="mb-2 text-sm text-muted">
         施設を運営している法人の一覧です。<strong>法人番号で同一法人を判定</strong>しているため、
         「社会福祉法人○○」と「社会福祉法人　○○」のような表記の違いがあっても同じ法人としてまとめています。
       </p>
-      <p className="mb-5 text-xs text-muted">
+      <p className="mb-8 text-xs text-muted">
         表示順は、運営している施設数が多い順です。施設数は規模を示すものであり、
         <strong>当サイトによる評価・推薦を示すものではありません</strong>。
         法人番号の記載がない施設は法人ページを作成していません。
@@ -52,10 +52,10 @@ export default async function HojinIndex({
         <EmptyState />
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="card overflow-x-auto">
+            <table className="dtable w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left">
+                <tr className="border-b border-line-strong text-left">
                   <th className="py-2 pr-3 font-medium">法人名</th>
                   <th className="py-2 pr-3 font-medium whitespace-nowrap">施設数</th>
                   <th className="py-2 font-medium whitespace-nowrap">都道府県数</th>
@@ -63,9 +63,9 @@ export default async function HojinIndex({
               </thead>
               <tbody>
                 {rows.map((c) => (
-                  <tr key={c.slug} className="border-b border-line/60">
+                  <tr key={c.slug} className="border-b border-line hover:bg-tint">
                     <td className="py-2 pr-3">
-                      <Link href={`/hojin/${seg(c.slug)}/`} className="underline hover:text-accent">
+                      <Link href={`/hojin/${seg(c.slug)}/`} className="font-medium underline-offset-4 hover:text-accent hover:underline">
                         {c.name}
                       </Link>
                     </td>
@@ -77,9 +77,9 @@ export default async function HojinIndex({
             </table>
           </div>
 
-          <nav className="mt-6 flex items-center justify-between text-sm">
+          <nav className="mt-8 flex items-center justify-between gap-3 text-sm">
             {page > 1 ? (
-              <Link href={`/hojin/?page=${page - 1}`} className="underline hover:text-accent">
+              <Link href={`/hojin/?page=${page - 1}`} className="btn-secondary">
                 ← 前の{PER_PAGE}件
               </Link>
             ) : (
@@ -87,7 +87,7 @@ export default async function HojinIndex({
             )}
             <span className="text-muted">ページ {page}</span>
             {hasNext ? (
-              <Link href={`/hojin/?page=${page + 1}`} className="underline hover:text-accent">
+              <Link href={`/hojin/?page=${page + 1}`} className="btn-secondary">
                 次の{PER_PAGE}件 →
               </Link>
             ) : (

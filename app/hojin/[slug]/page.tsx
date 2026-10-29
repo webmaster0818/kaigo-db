@@ -49,24 +49,24 @@ export default async function HojinPage({ params }: { params: Params }) {
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Breadcrumb items={[{ name: "ホーム", href: "/" }, { name: c.name }]} />
-      <h1 className="mb-3">{c.name}が運営する介護事業所</h1>
+      <h1 className="mb-6">{c.name}が運営する介護事業所</h1>
 
-      <dl className="mb-5 flex flex-wrap gap-x-8 gap-y-2 border-y border-line py-3 text-sm">
+      <dl className="stat-row mb-6">
         <div>
-          <dt className="text-xs text-muted">施設数</dt>
-          <dd className="tabular-nums text-lg font-bold">{c.facility_count.toLocaleString()}</dd>
+          <dt>施設数</dt>
+          <dd className="tabular-nums">{c.facility_count.toLocaleString()}</dd>
         </div>
         <div>
-          <dt className="text-xs text-muted">展開都道府県</dt>
-          <dd className="tabular-nums text-lg font-bold">{c.pref_count.toLocaleString()}</dd>
+          <dt>展開都道府県</dt>
+          <dd className="tabular-nums">{c.pref_count.toLocaleString()}</dd>
         </div>
         <div>
-          <dt className="text-xs text-muted">サービス種別</dt>
-          <dd className="tabular-nums text-lg font-bold">{types.size.toLocaleString()}</dd>
+          <dt>サービス種別</dt>
+          <dd className="tabular-nums">{types.size.toLocaleString()}</dd>
         </div>
         <div>
-          <dt className="text-xs text-muted">法人番号</dt>
-          <dd className="tabular-nums text-lg font-bold">{c.corporate_number}</dd>
+          <dt>法人番号</dt>
+          <dd className="tabular-nums">{c.corporate_number}</dd>
         </div>
       </dl>
 

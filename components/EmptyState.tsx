@@ -10,7 +10,7 @@ export default function EmptyState({
   detail?: string;
 }) {
   return (
-    <div className="rounded border border-dashed border-line-strong bg-surface px-4 py-10 text-center">
+    <div className="border border-dashed border-line-strong bg-surface px-4 py-12 text-center">
       <p className="text-sm font-bold text-ink">{title}</p>
       <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted">{detail}</p>
     </div>

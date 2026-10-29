@@ -102,8 +102,8 @@ export default async function AreaDensityRanking({ searchParams }: { searchParam
         />
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[380px] border-collapse text-sm">
+          <div className="card overflow-x-auto">
+            <table className="dtable w-full min-w-[380px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-muted">
                   <th scope="col" className="w-12 py-2 pr-3 text-right font-medium">順位</th>
