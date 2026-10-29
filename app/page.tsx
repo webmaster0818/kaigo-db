@@ -154,27 +154,19 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   return (
     <main>
       {/* =====================================================================
-          01 ファーストビュー（見出し＋イラスト＋検索フォーム）
+          01 ファーストビュー（見出し → すぐ検索フォーム）
+          サイトの説明文（「記載なし」・推測で補完しない・口コミ等を載せない）は 08 の掲載データの節に移した。
           ===================================================================== */}
-      <section className="pt-2 md:pt-6">
-        <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-4">
-          <div>
-            <span className="eyebrow">厚生労働省の公表データにもとづく施設情報</span>
-            <h1 className="mt-5 mb-5 text-[2rem] leading-[1.4] md:text-[2.75rem]">
-              公表データにもとづく
-              <br />
-              介護施設の検索
-            </h1>
-            <p className="max-w-xl text-sm leading-[2] text-muted">
-              全国{total > 0 ? total.toLocaleString() : ""}件の介護施設を、住所からの距離・市区町村・サービス種別・運営法人で検索できるデータベースです。
-              公表データに記載のない項目は「記載なし」と表示し、推測による補完は行っていません。口コミ・独自の★評価・おすすめ順は掲載していません。
-            </p>
-          </div>
-          {/* 装飾用の画像。差し替えは components/HeroVisual.tsx */}
-          <HeroVisual />
-        </div>
+      <section className="pt-1 md:pt-4">
+        <h1 className="mb-4 text-[1.6rem] leading-[1.4] md:mb-6 md:text-[2.5rem]">
+          公表データにもとづく
+          <br />
+          介護施設の検索
+        </h1>
+        {/* 写真に差し替えるときは components/HeroVisual.tsx の HERO.src を設定する（今は何も表示しない） */}
+        <HeroVisual />
 
-        <div id="search" className="mt-8 scroll-mt-24 md:mt-6">
+        <div id="search" className="scroll-mt-24">
           <PlaceSearchForm
             types={types}
             defaults={{ q: qRaw, lat: latRaw, lng: lngRaw, radius: radiusRaw, type: typeRaw, sort }}
@@ -290,9 +282,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             {/* ---- エリアから探す ---- */}
             <div id="area" className="tab-panel panel-area">
               <h2 className="sr-only">エリアから探す</h2>
-              <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted">
-                {`地方、都道府県、市区町村の順に絞り込むことができます。掲載範囲は${stats.prefs}都道府県・${stats.cities.toLocaleString()}市区町村です。数字は各都道府県の掲載件数です。`}
-              </p>
               {prefs.length > 0 && (
                 <>
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -301,12 +290,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                       const n = Number(prefBySlug.get(slug)?.facility_count ?? 0);
                       return (
                         <li key={slug}>
-                          <Link href={`/area/${slug}/`} className="pref-card card card-link">
-                            {/* 写真を入れるときは、この枠の中に <img>（object-fit: cover）を置く */}
-                            <span className="pref-media" aria-hidden>
-                              <span className="pref-glyph">{name.replace(/[都府県]$/, "")}</span>
-                            </span>
-                            <span className="pref-body">
+                          <Link href={`/area/${slug}/`} className="pref-card">
+                            {/* 写真を入れるときは、ここに <span className="pref-media"><img …/></span> を置く（.pref-media の CSS は用意済み） */}
+                            <span className="pref-glyph" aria-hidden>{name.replace(/[都府県]$/, "")}</span>
+                            <span className="pref-body card">
                               <span className="pref-name">{name}</span>
                               <span className="pref-count">
                                 {n > 0 ? n.toLocaleString() : "-"}
@@ -555,6 +542,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             title="当サイトの掲載データについて"
             lead="項目ごとの記載の割合（充足率）を公開しています。記載のない項目は推測で補完せず、「記載なし」と表示しています。"
           />
+          {/* 旧ファーストビューの説明文（文言はそのまま） */}
+          <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted">
+            全国{total > 0 ? total.toLocaleString() : ""}件の介護施設を、住所からの距離・市区町村・サービス種別・運営法人で検索できるデータベースです。
+            公表データに記載のない項目は「記載なし」と表示し、推測による補完は行っていません。口コミ・独自の★評価・おすすめ順は掲載していません。
+          </p>
           <div className="card reveal overflow-x-auto">
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>

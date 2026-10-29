@@ -519,7 +519,8 @@ a.chip:hover {
   }
 }
 
-/* 主要都道府県のカード。写真を入れるときは .pref-media の中に <img> を置く（今は文字の線画） */
+/* 主要都道府県：大きな都道府県名（枠・背景なし）＋その下に白地の枠ボタン（名前と件数）。
+   写真を入れるときは .pref-glyph の代わりに <span class="pref-media"><img></span> を置く */
 .pref-card {
   display: flex;
   flex-direction: column;
@@ -527,13 +528,10 @@ a.chip:hover {
 }
 .pref-media {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: var(--color-paper);
-  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 10px;
 }
 .pref-media img {
   position: absolute;
@@ -542,20 +540,19 @@ a.chip:hover {
   height: 100%;
   object-fit: cover;
 }
-.pref-media {
-  container-type: inline-size;
-}
 .pref-glyph {
-  /* 3文字（北海道・神奈川）でも枠に収まる大きさ */
-  font-size: min(24cqi, 3rem);
+  display: block;
+  padding: 4px 2px 12px;
+  font-size: clamp(1.9rem, 3vw, 2.4rem);
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
   letter-spacing: 0.04em;
-  color: var(--color-line-strong);
+  color: var(--color-ink);
+  white-space: nowrap;
   transition: color 0.2s;
 }
 .pref-card:hover .pref-glyph {
-  color: var(--color-ink);
+  color: var(--color-accent);
 }
 .pref-body {
   display: flex;
@@ -563,7 +560,12 @@ a.chip:hover {
   align-items: baseline;
   justify-content: space-between;
   gap: 2px 8px;
+  margin-top: auto;
   padding: 12px 14px;
+  transition: border-color 0.2s;
+}
+.pref-card:hover .pref-body {
+  border-color: var(--color-accent);
 }
 .pref-name,
 .pref-count {
@@ -578,6 +580,18 @@ a.chip:hover {
   font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+@media (max-width: 639px) {
+  .pref-body {
+    flex-wrap: nowrap;
+    padding: 12px 10px;
+  }
+  .pref-name {
+    font-size: 13px;
+  }
+  .pref-count {
+    font-size: 14px;
+  }
 }
 
 /* 地方ごとの行：左に地方名、右に「都道府県（主な市区町村）」 */
