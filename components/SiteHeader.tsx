@@ -15,7 +15,7 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-20 border-b border-line-strong bg-paper/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:py-4">
         <Link href="/" className="flex items-baseline gap-3">
-          <span className="font-display text-xl font-semibold tracking-wider text-ink">{SITE_NAME}</span>
+          <span className="font-display text-xl font-bold tracking-wider text-ink">{SITE_NAME}</span>
           <span className="text-[11px] tracking-wider text-muted">{SITE_TAGLINE}</span>
         </Link>
         <nav className="-mx-4 w-full overflow-x-auto px-4 md:mx-0 md:ml-auto md:w-auto md:px-0">

@@ -1,8 +1,26 @@
 import type { Metadata } from "next";
+import { Montserrat, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+
+// 書体：和文は Noto Sans JP、欧文・数字は Montserrat（caresul-kaigo.jp に倣う）。next/font で自己ホストし、
+// 代替フォントの寸法を合わせてレイアウトのずれを抑える。和文は字数が多く分割配信になるため先読みしない。
+// 施設・法人ページ（lib/direct.ts）は <html> の class を scripts/gen-direct-shell.mjs で取り出して同じものを付ける。
+const notoSansJp = Noto_Sans_JP({
+  // 可変フォント1組（400〜700）で全ウェイトをまかなう（固定ウェイトを3つ持つより転送量が少ない）
+  weight: "variable",
+  display: "swap",
+  preload: false,
+  variable: "--font-noto",
+});
+const montserrat = Montserrat({
+  weight: ["500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-montserrat",
+});
 
 // 注意: ここに alternates.canonical を書かないこと。
 // 全ページが '/' を指してしまう事故が起きるため、canonical は各ページで自己参照を設定する。
@@ -29,7 +47,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja">
+    <html lang="ja" className={`${notoSansJp.variable} ${montserrat.variable}`}>
       <body>
         <script
           type="application/ld+json"

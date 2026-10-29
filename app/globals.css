@@ -27,10 +27,12 @@
   --color-leaf: #4f7c5a;
   --color-leaf-weak: #eaf3ec;
 
-  --font-sans: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", Meiryo,
-    system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Noto Serif CJK JP",
-    serif;
+  /* 欧文・数字は Montserrat、和文は Noto Sans JP（app/layout.tsx の next/font が --font-* を定義する） */
+  --font-sans: var(--font-montserrat), var(--font-noto), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Yu Gothic", Meiryo, sans-serif;
+  /* 見出し・数字も同じゴシック（明朝は使わない） */
+  --font-display: var(--font-montserrat), var(--font-noto), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Yu Gothic", Meiryo, sans-serif;
 
   --radius-card: 0px;
 }
@@ -65,12 +67,12 @@ a {
   outline-offset: 2px;
 }
 
-/* 見出し。明朝で静かに、階層は大きさと余白で示す */
+/* 見出し。ゴシックの太字で、階層は大きさと余白で示す */
 h1,
 h2 {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 h1 {
   font-size: 1.75rem;
@@ -278,7 +280,7 @@ a.chip:hover {
 .steps .step-no {
   font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1;
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
@@ -382,7 +384,232 @@ a.chip:hover {
   margin-top: 4px;
   font-family: var(--font-display);
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   color: var(--color-ink);
+}
+
+/* 住所・地名の候補（components/PlaceSearchForm.tsx） */
+.ac-list {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: min(60vh, 440px);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-ink);
+  box-shadow: 0 12px 28px rgb(29 26 23 / 12%);
+}
+.ac-option {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ink);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-line);
+}
+.ac-option:last-child {
+  border-bottom: 0;
+}
+.ac-option[aria-selected="true"],
+.ac-option:hover {
+  background: var(--color-tint);
+}
+.ac-kind {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+.ac-label {
+  overflow-wrap: anywhere;
+}
+.ac-count {
+  font-size: 12px;
+  color: var(--color-muted-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- トップの探し方タブ（ラジオ＋CSS。JS 不要） ---- */
+.tab-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--color-line-strong);
+  border-bottom: 0;
+  background: var(--color-tint);
+}
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  cursor: pointer;
+  border-top: 3px solid transparent;
+  border-bottom: 1px solid var(--color-line-strong);
+  transition: color 0.2s, background-color 0.2s;
+}
+.tab + .tab {
+  border-left: 1px solid var(--color-line-strong);
+}
+.tab:hover {
+  color: var(--color-ink);
+}
+.tab .icon {
+  color: currentColor;
+}
+.tab-panels {
+  border: 1px solid var(--color-line-strong);
+  border-top: 0;
+  background: var(--color-surface);
+  padding: 28px 20px;
+}
+@media (min-width: 768px) {
+  .tab-panels {
+    padding: 36px 36px;
+  }
+}
+.tab-panel {
+  display: none;
+}
+#tab-area:checked ~ .tab-panels .panel-area,
+#tab-rank:checked ~ .tab-panels .panel-rank,
+#tab-cond:checked ~ .tab-panels .panel-cond {
+  display: block;
+}
+#tab-area:checked ~ .tab-list .tab-area,
+#tab-rank:checked ~ .tab-list .tab-rank,
+#tab-cond:checked ~ .tab-list .tab-cond {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-top-color: var(--color-accent);
+  border-bottom-color: transparent;
+}
+#tab-area:focus-visible ~ .tab-list .tab-area,
+#tab-rank:focus-visible ~ .tab-list .tab-rank,
+#tab-cond:focus-visible ~ .tab-list .tab-cond {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -4px;
+}
+@media (max-width: 639px) {
+  .tab {
+    flex-direction: column;
+    gap: 4px;
+    min-height: 72px;
+    padding: 8px 2px;
+    font-size: 11.5px;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  .ac-option {
+    grid-template-columns: 2.8rem minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+}
+
+/* 主要都道府県のカード。写真を入れるときは .pref-media の中に <img> を置く（今は文字の線画） */
+.pref-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.pref-media {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-line);
+}
+.pref-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pref-media {
+  container-type: inline-size;
+}
+.pref-glyph {
+  /* 3文字（北海道・神奈川）でも枠に収まる大きさ */
+  font-size: min(24cqi, 3rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--color-line-strong);
+  transition: color 0.2s;
+}
+.pref-card:hover .pref-glyph {
+  color: var(--color-ink);
+}
+.pref-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  padding: 12px 14px;
+}
+.pref-name,
+.pref-count {
+  white-space: nowrap;
+}
+.pref-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+.pref-count {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 地方ごとの行：左に地方名、右に「都道府県（主な市区町村）」 */
+.area-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--color-line);
+}
+.area-row:last-child {
+  border-bottom: 0;
+}
+.area-row-name {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+.area-row-prefs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+@media (min-width: 768px) {
+  .area-row {
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 16px;
+    padding: 18px 24px;
+  }
+  .area-row-name {
+    padding-top: 2px;
+  }
 }

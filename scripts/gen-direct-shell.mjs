@@ -1,5 +1,5 @@
-// opennextjs-cloudflare build の後に実行する。Next が書き出した _not-found.html の head から、
-// ビルドごとに名前の変わる CSS・アイコンの <link> を取り出し、worker.ts の直接描画（lib/direct.ts）用に保存する。
+// opennextjs-cloudflare build の後に実行する。Next が書き出した _not-found.html から、
+// ビルドごとに名前の変わる CSS・アイコンの <link> と <html> の class（書体）を取り出し、worker.ts の直接描画（lib/direct.ts）用に保存する。
 // 取り出せなければ失敗で終わる（ship が止まる）。
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -15,6 +15,10 @@ if (icons.length === 0) throw new Error("icon の <link> が見つかりませ�
 const linkHeader = styles
   .map((l) => `<${l.match(/href="([^"]+)"/)[1]}>; rel=preload; as="style"`)
   .join(", ");
-const out = { styles: styles.join(""), icons: icons.join(""), linkHeader };
+// <html> の class（next/font の書体の変数。ビルドごとに名前が変わる）
+const htmlTag = html.match(/<html[^>]*>/)?.[0] ?? "";
+const htmlClass = htmlTag.match(/class="([^"]*)"/)?.[1] ?? "";
+if (!htmlClass) throw new Error("<html> の class（next/font）が見つかりません");
+const out = { styles: styles.join(""), icons: icons.join(""), linkHeader, htmlClass };
 writeFileSync("lib/direct-shell.generated.json", JSON.stringify(out, null, 2) + "\n");
 console.log("lib/direct-shell.generated.json:", out);

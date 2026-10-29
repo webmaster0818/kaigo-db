@@ -39,6 +39,8 @@ export interface DirectShell {
   icons: string;
   /** HTTP の Link ヘッダー（CSS の preload）。Next の応答と同じ値 */
   linkHeader: string;
+  /** <html> の class（app/layout.tsx の next/font が付ける書体の変数） */
+  htmlClass?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +154,7 @@ function siteHeader(): string {
     link(
       "/",
       "flex items-baseline gap-3",
-      `<span class="font-display text-xl font-semibold tracking-wider text-ink">${esc(SITE_NAME)}</span>` +
+      `<span class="font-display text-xl font-bold tracking-wider text-ink">${esc(SITE_NAME)}</span>` +
         `<span class="text-[11px] tracking-wider text-muted">${esc(SITE_TAGLINE)}</span>`,
     ).s +
     `<nav class="-mx-4 w-full overflow-x-auto px-4 md:mx-0 md:ml-auto md:w-auto md:px-0"><ul class="flex gap-x-5 whitespace-nowrap text-[13px] md:flex-wrap">` +
@@ -196,7 +198,7 @@ function footer(): string {
 
 function page(shell: DirectShell, meta: Parameters<typeof head>[1], main: string): string {
   return (
-    `<!DOCTYPE html><html lang="ja">` +
+    `<!DOCTYPE html><html lang="ja"${shell.htmlClass ? ` class="${esc(shell.htmlClass)}"` : ""}>` +
     head(shell, meta) +
     `<body><div hidden=""><!--$--><!--/$--></div>` +
     jsonLdScript({ "@context": "https://schema.org", "@type": "WebSite", name: SITE_NAME, url: SITE_URL, inLanguage: "ja" }) +

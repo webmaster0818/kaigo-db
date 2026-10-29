@@ -15,3 +15,6 @@ data/*.sqlite-shm
 data/d1/
 raw/
 lib/direct-shell.generated.json
+
+# 住所候補の静的索引（scripts/gen-addr-index.ts が data/kaigo.sqlite から作る。ship で毎回作り直す）
+public/addr/

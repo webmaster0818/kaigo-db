@@ -2,8 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { queries, type PlaceHit } from "@/lib/db";
 import { isValidJapanLatLng } from "@/lib/geo";
-import { PREF_SLUGS } from "@/lib/slug";
+import { PREF_ORDER, PREF_SLUGS } from "@/lib/slug";
 import { REGIONS } from "@/lib/regions";
+import TOP_CITIES_JSON from "@/lib/areaTopCities.generated.json";
 import { abs, seg, SITE_NAME } from "@/lib/site";
 import { NOT_A_RECOMMENDATION, RANKING_AXES } from "@/lib/ranking";
 import { TYPE_GUIDES, TYPE_GUIDE_CAVEAT } from "@/lib/typeGuide";
@@ -65,30 +66,20 @@ function SectionHeading({ icon, title, lead }: { icon?: IconName; title: string;
   );
 }
 
-/** トップの3導線。どこから入っても同じデータに辿り着けることを最初に示す */
-const ENTRANCES = [
-  {
-    href: "#search",
-    icon: "distance" as IconName,
-    title: "住所・現在地から探す",
-    body: "入力した住所から近い順に施設を表示します。距離は直線距離であり、道のりではありません。",
-    cta: "検索フォーム",
-  },
-  {
-    href: "/type/",
-    icon: "type" as IconName,
-    title: "サービス種別から探す",
-    body: "特養・老健・グループホーム・有料老人ホームの4種別を掲載しています。種別ごとの費用の考え方や入居条件の違いもまとめています。",
-    cta: "種別一覧",
-  },
-  {
-    href: "/hojin/",
-    icon: "hojin" as IconName,
-    title: "運営法人から探す",
-    body: "同じ法人が運営する施設をまとめて確認できます。法人の同一性は、法人名ではなく法人番号（13桁）で判定しています。",
-    cta: "法人一覧",
-  },
-];
+/** エリアタブの都道府県ごとの主な市区町村（scripts/gen-addr-index.ts が area テーブルの施設数上位から作る） */
+const TOP_CITIES = TOP_CITIES_JSON as Record<string, Array<{ city: string; city_slug: string }>>;
+
+/** エリアタブで大きく出す都道府県（掲載件数の多い大都市圏） */
+const MAJOR_PREFS = ["北海道", "東京都", "神奈川県", "愛知県", "大阪府", "福岡県"];
+
+/** エリアタブの地方の行。中国と四国は1行にまとめる */
+const AREA_ROWS = REGIONS.reduce<Array<{ name: string; prefs: string[] }>>((rows, r) => {
+  const last = rows[rows.length - 1];
+  if (r.name === "四国" && last?.name === "中国") {
+    rows[rows.length - 1] = { name: "中国・四国", prefs: [...last.prefs, ...r.prefs] };
+  } else rows.push({ name: r.name, prefs: [...r.prefs] });
+  return rows;
+}, []);
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
@@ -108,12 +99,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   );
   const searched = qRaw.length > 0 || Boolean(latRaw && lngRaw);
 
-  const [meta, stats, types, prefs, topAreas, topCorps] = await Promise.all([
+  const [meta, stats, types, prefs, topCorps] = await Promise.all([
     queries.meta(),
     queries.siteStats(),
     queries.typeCounts(),
     queries.prefectures(),
-    queries.topAreas(12),
     queries.topCorporations(10),
   ]);
 
@@ -272,98 +262,194 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       )}
 
       {/* =====================================================================
-          02 エリアから探す（地方 → 都道府県 → 市区町村）
-          検索フォームの直後に置く。都道府県を選ぶと /area/<pref>/ の市区町村一覧へ、そこから施設一覧へ進む。
+          02 探し方のタブ（エリアから探す／ランキングから探す／条件から探す）
+          ラジオボタン＋CSS で切り替える（JS 不要）。3つのパネルはすべて HTML に含まれる（リンクはクローラーにも見える）。
+          住所から探すは上の検索フォームが担うのでタブには入れない。
           ===================================================================== */}
-      {prefs.length > 0 && (
-        <section id="area" className="mt-16 scroll-mt-24 md:mt-20">
-          <SectionHeading
-            icon="area"
-            title="エリアから探す"
-            lead={`地方、都道府県、市区町村の順に絞り込むことができます。掲載範囲は${stats.prefs}都道府県・${stats.cities.toLocaleString()}市区町村です。数字は各都道府県の掲載件数です。`}
-          />
-          <ol className="steps reveal mb-6" aria-label="エリアから探す手順">
-            <li><span className="step-no">1</span>都道府県を選ぶ</li>
-            <li><span className="step-no">2</span>市区町村を選ぶ</li>
-            <li><span className="step-no">3</span>施設の一覧を見る</li>
-          </ol>
-          <div className="grid gap-4 md:grid-cols-2">
-            {REGIONS.map((region) => {
-              const items = region.prefs.map((name) => {
-                const slug = PREF_SLUGS[name];
-                return { name, slug, n: Number(prefBySlug.get(slug)?.facility_count ?? 0) };
-              });
-              return (
-                <div key={region.name} className="card reveal p-5">
-                  <h3 className="mb-3 flex items-center gap-3 text-[15px] tracking-wider text-ink">
-                    {region.name}
-                    <span aria-hidden className="h-px flex-1 bg-line" />
-                  </h3>
-                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
-                    {items.map((p) => (
-                      <li key={p.slug}>
-                        {p.n > 0 ? (
-                          <Link href={`/area/${p.slug}/`} className="chip w-full">
-                            {p.name.replace(/[都府県]$/, "")}
-                            <span className="chip-count">{p.n.toLocaleString()}</span>
-                          </Link>
-                        ) : (
-                          <span className="chip chip-disabled w-full">
-                            {p.name.replace(/[都府県]$/, "")}
-                            <span className="chip-count">-</span>
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
+      <section id="find" className="mt-16 scroll-mt-24 md:mt-20">
+        <div className="tabs">
+          <input type="radio" name="find-tab" id="tab-area" className="tab-input sr-only" defaultChecked />
+          <input type="radio" name="find-tab" id="tab-rank" className="tab-input sr-only" />
+          <input type="radio" name="find-tab" id="tab-cond" className="tab-input sr-only" />
+          <div className="tab-list">
+            <label htmlFor="tab-area" className="tab tab-area">
+              <Icon name="area" size={28} />
+              エリアから探す
+            </label>
+            <label htmlFor="tab-rank" className="tab tab-rank">
+              <Icon name="sort" size={28} />
+              ランキングから探す
+            </label>
+            <label htmlFor="tab-cond" className="tab tab-cond">
+              <Icon name="type" size={28} />
+              条件から探す
+            </label>
           </div>
 
-          {topAreas.length > 0 && (
-            <div className="reveal">
-              <h3 className="mt-10 mb-3 text-muted">掲載件数の多い市区町村</h3>
-              <ul className="flex flex-wrap gap-2">
-                {topAreas.map((a) => (
-                  <li key={`${a.pref_slug}-${a.city_slug}`}>
-                    <Link href={`/area/${seg(a.pref_slug)}/${seg(a.city_slug)}/`} className="chip">
-                      {a.prefecture}{a.city}
-                      <span className="chip-count">{a.facility_count.toLocaleString()}</span>
+          <div className="tab-panels">
+            {/* ---- エリアから探す ---- */}
+            <div id="area" className="tab-panel panel-area">
+              <h2 className="sr-only">エリアから探す</h2>
+              <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted">
+                {`地方、都道府県、市区町村の順に絞り込むことができます。掲載範囲は${stats.prefs}都道府県・${stats.cities.toLocaleString()}市区町村です。数字は各都道府県の掲載件数です。`}
+              </p>
+              {prefs.length > 0 && (
+                <>
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    {MAJOR_PREFS.map((name) => {
+                      const slug = PREF_SLUGS[name];
+                      const n = Number(prefBySlug.get(slug)?.facility_count ?? 0);
+                      return (
+                        <li key={slug}>
+                          <Link href={`/area/${slug}/`} className="pref-card card card-link">
+                            {/* 写真を入れるときは、この枠の中に <img>（object-fit: cover）を置く */}
+                            <span className="pref-media" aria-hidden>
+                              <span className="pref-glyph">{name.replace(/[都府県]$/, "")}</span>
+                            </span>
+                            <span className="pref-body">
+                              <span className="pref-name">{name}</span>
+                              <span className="pref-count">
+                                {n > 0 ? n.toLocaleString() : "-"}
+                                <span className="ml-0.5 text-[11px] text-muted">件</span>
+                              </span>
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <div className="card mt-6">
+                    {AREA_ROWS.map((row) => (
+                      <div key={row.name} className="area-row">
+                        <h3 className="area-row-name">{row.name}</h3>
+                        <ul className="area-row-prefs">
+                          {row.prefs.map((name) => {
+                            const slug = PREF_SLUGS[name];
+                            const n = Number(prefBySlug.get(slug)?.facility_count ?? 0);
+                            const cities = n > 0 ? TOP_CITIES[slug] ?? [] : [];
+                            return (
+                              <li key={slug}>
+                                {n > 0 ? (
+                                  <Link href={`/area/${slug}/`} className="font-bold text-ink underline-offset-4 hover:text-accent hover:underline">
+                                    {name}
+                                  </Link>
+                                ) : (
+                                  <span className="font-bold text-muted-2">{name}</span>
+                                )}
+                                {cities.length > 0 && (
+                                  <span className="text-muted">
+                                    （
+                                    {cities.map((c, i) => (
+                                      <span key={c.city_slug}>
+                                        {i > 0 && "、"}
+                                        <Link
+                                          href={`/area/${slug}/${seg(c.city_slug)}/`}
+                                          className="underline-offset-4 hover:text-accent hover:underline"
+                                        >
+                                          {c.city}
+                                        </Link>
+                                      </span>
+                                    ))}
+                                    ）
+                                  </span>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              <p className="mt-6">
+                <Link href="/area/" className="btn-secondary">都道府県一覧 →</Link>
+              </p>
+            </div>
+
+            {/* ---- ランキングから探す（公表データの項目別の並べ替え。文言は lib/ranking.ts のまま） ---- */}
+            <div id="ranking" className="tab-panel panel-rank">
+              <h2 className="sr-only">ランキングから探す</h2>
+              <h3 className="text-base">公表データの項目別の並べ替え</h3>
+              <p className="mt-2 mb-5 max-w-3xl text-sm leading-relaxed text-muted">
+                公表データの単一の項目の値にもとづいて並べ替えた一覧です。複数の項目を重み付けして合成した総合ランキングや、おすすめ順・★評価は作成していません。
+              </p>
+              <p className="note mb-4 px-5 py-4 text-sm font-bold">{NOT_A_RECOMMENDATION}</p>
+              <ul className="grid gap-4 sm:grid-cols-2">
+                {RANKING_AXES.map((a) =>
+                  // 距離の軸はこのページの検索フォームそのもの。自分自身へのリンクは張らない。
+                  a.href === "/" ? (
+                    <li key={a.href} className="border border-dashed border-line-strong px-5 py-5">
+                      <span className="text-sm font-bold text-ink">{a.label}</span>
+                      <span className="mt-1.5 block text-xs leading-relaxed text-muted">
+                        {a.basis}このページ上部の検索フォームで、この順序による検索ができます。
+                      </span>
+                    </li>
+                  ) : (
+                    <li key={a.href}>
+                      <Link href={a.href} className="card card-link block h-full px-5 py-5">
+                        <span className="text-sm font-bold text-accent">{a.label}</span>
+                        <span className="mt-1.5 block text-xs leading-relaxed text-muted">{a.basis}</span>
+                      </Link>
+                    </li>
+                  ),
+                )}
+              </ul>
+            </div>
+
+            {/* ---- 条件から探す（既存のページ・クエリで表せる条件だけ） ---- */}
+            <div id="conditions" className="tab-panel panel-cond">
+              <h2 className="sr-only">条件から探す</h2>
+              <h3 className="text-base">サービス種別から探す</h3>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {types.map((t) => (
+                  <li key={t.service_type_slug}>
+                    <Link href={`/type/${seg(t.service_type_slug)}/`} className="chip w-full">
+                      {TYPE_GUIDES[t.service_type_slug]?.short ?? t.service_type}
+                      <span className="chip-count">{t.facility_count.toLocaleString()}件</span>
                     </Link>
                   </li>
                 ))}
               </ul>
+
+              <h3 className="mt-8 text-base">都道府県とサービス種別で絞り込む</h3>
+              <form method="get" action="/ranking/capacity/" className="card mt-3 p-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-xs">
+                    <span className="font-bold tracking-wider text-ink">都道府県</span>
+                    <select name="pref" defaultValue="" className="field mt-1.5">
+                      <option value="">すべて</option>
+                      {PREF_ORDER.map((name) => (
+                        <option key={PREF_SLUGS[name]} value={PREF_SLUGS[name]}>{name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs">
+                    <span className="font-bold tracking-wider text-ink">サービス種別</span>
+                    <select name="type" defaultValue="" className="field mt-1.5">
+                      <option value="">すべて</option>
+                      {types.map((t) => (
+                        <option key={t.service_type_slug} value={t.service_type_slug}>{t.service_type}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button type="submit" className="btn-primary w-full sm:w-auto">施設を定員が多い順に表示</button>
+                  <button type="submit" formAction="/ranking/hojin-scale/" className="btn-secondary w-full sm:w-auto">
+                    運営法人を施設数が多い順に表示
+                  </button>
+                </div>
+                <p className="mt-4 border-t border-line pt-4 text-[11px] leading-relaxed text-muted">
+                  {NOT_A_RECOMMENDATION}定員順の一覧は、公表データに定員の記載がある施設のみを対象にしています。
+                  距離と種別で探す場合は、上の検索フォームで「サービス種別」を選んでください。
+                </p>
+              </form>
             </div>
-          )}
-
-          <p className="mt-6">
-            <Link href="/area/" className="btn-secondary">都道府県一覧 →</Link>
-          </p>
-        </section>
-      )}
-
-      {/* =====================================================================
-          03 3つの入口
-          ===================================================================== */}
-      <section className="mt-16 md:mt-20">
-        <div className="mb-6 border-t border-line-strong pt-8 md:pt-10">
-          <h2>3つの検索方法</h2>
+          </div>
         </div>
-        <ul className="grid gap-4 md:grid-cols-3">
-          {ENTRANCES.map((e) => (
-            <li key={e.href} className="reveal">
-              <Link href={e.href} className="card card-link flex h-full flex-col p-6 md:p-7">
-                <Icon name={e.icon} size={64} />
-                <span className="mt-5 text-base font-bold leading-snug">{e.title}</span>
-                <span className="mt-2 flex-1 text-[13px] leading-relaxed text-muted">{e.body}</span>
-                <span className="mt-5 border-t border-line pt-4 text-[13px] font-bold tracking-wider text-accent">{e.cta} →</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
       </section>
-
       {/* =====================================================================
           04 このデータベースの規模（実績バッジではなく、数えた事実）
           ===================================================================== */}
@@ -458,38 +544,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           </p>
         </section>
       )}
-
-      {/* =====================================================================
-          07 ファクト別の並べ替え
-          ===================================================================== */}
-      <section className="mt-16 md:mt-20">
-        <SectionHeading
-          icon="sort"
-          title="公表データの項目別の並べ替え"
-          lead="公表データの単一の項目の値にもとづいて並べ替えた一覧です。複数の項目を重み付けして合成した総合ランキングや、おすすめ順・★評価は作成していません。"
-        />
-        <p className="note reveal mb-4 px-5 py-4 text-sm font-bold">{NOT_A_RECOMMENDATION}</p>
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {RANKING_AXES.map((a) =>
-            // 距離の軸はこのページの検索フォームそのもの。自分自身へのリンクは張らない。
-            a.href === "/" ? (
-              <li key={a.href} className="reveal border border-dashed border-line-strong px-5 py-5">
-                <span className="text-sm font-bold text-ink">{a.label}</span>
-                <span className="mt-1.5 block text-xs leading-relaxed text-muted">
-                  {a.basis}このページ上部の検索フォームで、この順序による検索ができます。
-                </span>
-              </li>
-            ) : (
-              <li key={a.href} className="reveal">
-                <Link href={a.href} className="card card-link block h-full px-5 py-5">
-                  <span className="text-sm font-bold text-accent">{a.label}</span>
-                  <span className="mt-1.5 block text-xs leading-relaxed text-muted">{a.basis}</span>
-                </Link>
-              </li>
-            ),
-          )}
-        </ul>
-      </section>
 
       {/* =====================================================================
           08 このサイトのデータについて

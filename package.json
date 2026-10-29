@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "import": "tsx scripts/import.ts",
+    "gen:addr": "tsx scripts/gen-addr-index.ts",
     "cf:build": "opennextjs-cloudflare build",
     "cf:deploy": "opennextjs-cloudflare deploy"
   },

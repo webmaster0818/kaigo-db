@@ -1,0 +1,8 @@
+# Workers の静的アセット用（Worker を通らずに返る）。
+# 住所候補の索引：都道府県別・町域は index.json の v（内容のハッシュ）を ?v= に付けて読むので長く持たせる
+/addr/p/*
+  Cache-Control: public, max-age=2592000, immutable
+/addr/towns.json
+  Cache-Control: public, max-age=2592000, immutable
+/addr/index.json
+  Cache-Control: public, max-age=600

@@ -1,0 +1,848 @@
+{
+ "ehime": [
+  {
+   "city": "松山市",
+   "city_slug": "松山市"
+  },
+  {
+   "city": "今治市",
+   "city_slug": "今治市"
+  },
+  {
+   "city": "新居浜市",
+   "city_slug": "新居浜市"
+  },
+  {
+   "city": "西条市",
+   "city_slug": "西条市"
+  }
+ ],
+ "kagoshima": [
+  {
+   "city": "鹿児島市",
+   "city_slug": "鹿児島市"
+  },
+  {
+   "city": "霧島市",
+   "city_slug": "霧島市"
+  },
+  {
+   "city": "鹿屋市",
+   "city_slug": "鹿屋市"
+  },
+  {
+   "city": "薩摩川内市",
+   "city_slug": "薩摩川内市"
+  }
+ ],
+ "tokyo": [
+  {
+   "city": "練馬区",
+   "city_slug": "練馬区"
+  },
+  {
+   "city": "世田谷区",
+   "city_slug": "世田谷区"
+  },
+  {
+   "city": "大田区",
+   "city_slug": "大田区"
+  },
+  {
+   "city": "足立区",
+   "city_slug": "足立区"
+  }
+ ],
+ "okayama": [
+  {
+   "city": "倉敷市",
+   "city_slug": "倉敷市"
+  },
+  {
+   "city": "岡山市北区",
+   "city_slug": "岡山市北区"
+  },
+  {
+   "city": "岡山市南区",
+   "city_slug": "岡山市南区"
+  },
+  {
+   "city": "岡山市東区",
+   "city_slug": "岡山市東区"
+  }
+ ],
+ "gunma": [
+  {
+   "city": "高崎市",
+   "city_slug": "高崎市"
+  },
+  {
+   "city": "前橋市",
+   "city_slug": "前橋市"
+  },
+  {
+   "city": "太田市",
+   "city_slug": "太田市"
+  },
+  {
+   "city": "伊勢崎市",
+   "city_slug": "伊勢崎市"
+  }
+ ],
+ "hokkaido": [
+  {
+   "city": "旭川市",
+   "city_slug": "旭川市"
+  },
+  {
+   "city": "函館市",
+   "city_slug": "函館市"
+  },
+  {
+   "city": "釧路市",
+   "city_slug": "釧路市"
+  },
+  {
+   "city": "札幌市北区",
+   "city_slug": "札幌市北区"
+  }
+ ],
+ "nagasaki": [
+  {
+   "city": "長崎市",
+   "city_slug": "長崎市"
+  },
+  {
+   "city": "佐世保市",
+   "city_slug": "佐世保市"
+  },
+  {
+   "city": "南島原市",
+   "city_slug": "南島原市"
+  },
+  {
+   "city": "諫早市",
+   "city_slug": "諫早市"
+  }
+ ],
+ "hiroshima": [
+  {
+   "city": "福山市",
+   "city_slug": "福山市"
+  },
+  {
+   "city": "呉市",
+   "city_slug": "呉市"
+  },
+  {
+   "city": "広島市安佐北区",
+   "city_slug": "広島市安佐北区"
+  },
+  {
+   "city": "広島市安佐南区",
+   "city_slug": "広島市安佐南区"
+  }
+ ],
+ "chiba": [
+  {
+   "city": "船橋市",
+   "city_slug": "船橋市"
+  },
+  {
+   "city": "松戸市",
+   "city_slug": "松戸市"
+  },
+  {
+   "city": "柏市",
+   "city_slug": "柏市"
+  },
+  {
+   "city": "市川市",
+   "city_slug": "市川市"
+  }
+ ],
+ "shizuoka": [
+  {
+   "city": "浜松市中央区",
+   "city_slug": "浜松市中央区"
+  },
+  {
+   "city": "静岡市葵区",
+   "city_slug": "静岡市葵区"
+  },
+  {
+   "city": "静岡市清水区",
+   "city_slug": "静岡市清水区"
+  },
+  {
+   "city": "富士市",
+   "city_slug": "富士市"
+  }
+ ],
+ "miyazaki": [
+  {
+   "city": "宮崎市",
+   "city_slug": "宮崎市"
+  },
+  {
+   "city": "延岡市",
+   "city_slug": "延岡市"
+  },
+  {
+   "city": "都城市",
+   "city_slug": "都城市"
+  },
+  {
+   "city": "小林市",
+   "city_slug": "小林市"
+  }
+ ],
+ "kagawa": [
+  {
+   "city": "高松市",
+   "city_slug": "高松市"
+  },
+  {
+   "city": "丸亀市",
+   "city_slug": "丸亀市"
+  },
+  {
+   "city": "三豊市",
+   "city_slug": "三豊市"
+  },
+  {
+   "city": "坂出市",
+   "city_slug": "坂出市"
+  }
+ ],
+ "saitama": [
+  {
+   "city": "川口市",
+   "city_slug": "川口市"
+  },
+  {
+   "city": "越谷市",
+   "city_slug": "越谷市"
+  },
+  {
+   "city": "川越市",
+   "city_slug": "川越市"
+  },
+  {
+   "city": "所沢市",
+   "city_slug": "所沢市"
+  }
+ ],
+ "wakayama": [
+  {
+   "city": "和歌山市",
+   "city_slug": "和歌山市"
+  },
+  {
+   "city": "田辺市",
+   "city_slug": "田辺市"
+  },
+  {
+   "city": "海南市",
+   "city_slug": "海南市"
+  },
+  {
+   "city": "紀の川市",
+   "city_slug": "紀の川市"
+  }
+ ],
+ "nagano": [
+  {
+   "city": "長野市",
+   "city_slug": "長野市"
+  },
+  {
+   "city": "上田市",
+   "city_slug": "上田市"
+  },
+  {
+   "city": "松本市",
+   "city_slug": "松本市"
+  },
+  {
+   "city": "飯田市",
+   "city_slug": "飯田市"
+  }
+ ],
+ "toyama": [
+  {
+   "city": "富山市",
+   "city_slug": "富山市"
+  },
+  {
+   "city": "高岡市",
+   "city_slug": "高岡市"
+  },
+  {
+   "city": "射水市",
+   "city_slug": "射水市"
+  },
+  {
+   "city": "南砺市",
+   "city_slug": "南砺市"
+  }
+ ],
+ "gifu": [
+  {
+   "city": "岐阜市",
+   "city_slug": "岐阜市"
+  },
+  {
+   "city": "大垣市",
+   "city_slug": "大垣市"
+  },
+  {
+   "city": "各務原市",
+   "city_slug": "各務原市"
+  },
+  {
+   "city": "中津川市",
+   "city_slug": "中津川市"
+  }
+ ],
+ "kanagawa": [
+  {
+   "city": "横須賀市",
+   "city_slug": "横須賀市"
+  },
+  {
+   "city": "藤沢市",
+   "city_slug": "藤沢市"
+  },
+  {
+   "city": "横浜市旭区",
+   "city_slug": "横浜市旭区"
+  },
+  {
+   "city": "横浜市戸塚区",
+   "city_slug": "横浜市戸塚区"
+  }
+ ],
+ "nara": [
+  {
+   "city": "奈良市",
+   "city_slug": "奈良市"
+  },
+  {
+   "city": "大和郡山市",
+   "city_slug": "大和郡山市"
+  },
+  {
+   "city": "橿原市",
+   "city_slug": "橿原市"
+  },
+  {
+   "city": "生駒市",
+   "city_slug": "生駒市"
+  }
+ ],
+ "ishikawa": [
+  {
+   "city": "金沢市",
+   "city_slug": "金沢市"
+  },
+  {
+   "city": "小松市",
+   "city_slug": "小松市"
+  },
+  {
+   "city": "白山市",
+   "city_slug": "白山市"
+  },
+  {
+   "city": "加賀市",
+   "city_slug": "加賀市"
+  }
+ ],
+ "oita": [
+  {
+   "city": "大分市",
+   "city_slug": "大分市"
+  },
+  {
+   "city": "別府市",
+   "city_slug": "別府市"
+  },
+  {
+   "city": "佐伯市",
+   "city_slug": "佐伯市"
+  },
+  {
+   "city": "豊後大野市",
+   "city_slug": "豊後大野市"
+  }
+ ],
+ "fukushima": [
+  {
+   "city": "いわき市",
+   "city_slug": "いわき市"
+  },
+  {
+   "city": "郡山市",
+   "city_slug": "郡山市"
+  },
+  {
+   "city": "福島市",
+   "city_slug": "福島市"
+  },
+  {
+   "city": "会津若松市",
+   "city_slug": "会津若松市"
+  }
+ ],
+ "hyogo": [
+  {
+   "city": "姫路市",
+   "city_slug": "姫路市"
+  },
+  {
+   "city": "尼崎市",
+   "city_slug": "尼崎市"
+  },
+  {
+   "city": "神戸市垂水区",
+   "city_slug": "神戸市垂水区"
+  },
+  {
+   "city": "西宮市",
+   "city_slug": "西宮市"
+  }
+ ],
+ "saga": [
+  {
+   "city": "佐賀市",
+   "city_slug": "佐賀市"
+  },
+  {
+   "city": "唐津市",
+   "city_slug": "唐津市"
+  },
+  {
+   "city": "鳥栖市",
+   "city_slug": "鳥栖市"
+  },
+  {
+   "city": "小城市",
+   "city_slug": "小城市"
+  }
+ ],
+ "osaka": [
+  {
+   "city": "東大阪市",
+   "city_slug": "東大阪市"
+  },
+  {
+   "city": "枚方市",
+   "city_slug": "枚方市"
+  },
+  {
+   "city": "豊中市",
+   "city_slug": "豊中市"
+  },
+  {
+   "city": "高槻市",
+   "city_slug": "高槻市"
+  }
+ ],
+ "aomori": [
+  {
+   "city": "青森市",
+   "city_slug": "青森市"
+  },
+  {
+   "city": "弘前市",
+   "city_slug": "弘前市"
+  },
+  {
+   "city": "八戸市",
+   "city_slug": "八戸市"
+  },
+  {
+   "city": "五所川原市",
+   "city_slug": "五所川原市"
+  }
+ ],
+ "kochi": [
+  {
+   "city": "高知市",
+   "city_slug": "高知市"
+  },
+  {
+   "city": "四万十市",
+   "city_slug": "四万十市"
+  },
+  {
+   "city": "南国市",
+   "city_slug": "南国市"
+  },
+  {
+   "city": "香南市",
+   "city_slug": "香南市"
+  }
+ ],
+ "fukuoka": [
+  {
+   "city": "久留米市",
+   "city_slug": "久留米市"
+  },
+  {
+   "city": "北九州市八幡西区",
+   "city_slug": "北九州市八幡西区"
+  },
+  {
+   "city": "北九州市小倉南区",
+   "city_slug": "北九州市小倉南区"
+  },
+  {
+   "city": "福岡市南区",
+   "city_slug": "福岡市南区"
+  }
+ ],
+ "tochigi": [
+  {
+   "city": "宇都宮市",
+   "city_slug": "宇都宮市"
+  },
+  {
+   "city": "足利市",
+   "city_slug": "足利市"
+  },
+  {
+   "city": "佐野市",
+   "city_slug": "佐野市"
+  },
+  {
+   "city": "栃木市",
+   "city_slug": "栃木市"
+  }
+ ],
+ "akita": [
+  {
+   "city": "秋田市",
+   "city_slug": "秋田市"
+  },
+  {
+   "city": "大仙市",
+   "city_slug": "大仙市"
+  },
+  {
+   "city": "横手市",
+   "city_slug": "横手市"
+  },
+  {
+   "city": "由利本荘市",
+   "city_slug": "由利本荘市"
+  }
+ ],
+ "tokushima": [
+  {
+   "city": "徳島市",
+   "city_slug": "徳島市"
+  },
+  {
+   "city": "阿南市",
+   "city_slug": "阿南市"
+  },
+  {
+   "city": "三好市",
+   "city_slug": "三好市"
+  },
+  {
+   "city": "吉野川市",
+   "city_slug": "吉野川市"
+  }
+ ],
+ "shiga": [
+  {
+   "city": "大津市",
+   "city_slug": "大津市"
+  },
+  {
+   "city": "長浜市",
+   "city_slug": "長浜市"
+  },
+  {
+   "city": "東近江市",
+   "city_slug": "東近江市"
+  },
+  {
+   "city": "彦根市",
+   "city_slug": "彦根市"
+  }
+ ],
+ "ibaraki": [
+  {
+   "city": "水戸市",
+   "city_slug": "水戸市"
+  },
+  {
+   "city": "日立市",
+   "city_slug": "日立市"
+  },
+  {
+   "city": "つくば市",
+   "city_slug": "つくば市"
+  },
+  {
+   "city": "ひたちなか市",
+   "city_slug": "ひたちなか市"
+  }
+ ],
+ "miyagi": [
+  {
+   "city": "仙台市青葉区",
+   "city_slug": "仙台市青葉区"
+  },
+  {
+   "city": "仙台市太白区",
+   "city_slug": "仙台市太白区"
+  },
+  {
+   "city": "仙台市泉区",
+   "city_slug": "仙台市泉区"
+  },
+  {
+   "city": "石巻市",
+   "city_slug": "石巻市"
+  }
+ ],
+ "mie": [
+  {
+   "city": "津市",
+   "city_slug": "津市"
+  },
+  {
+   "city": "四日市市",
+   "city_slug": "四日市市"
+  },
+  {
+   "city": "鈴鹿市",
+   "city_slug": "鈴鹿市"
+  },
+  {
+   "city": "松阪市",
+   "city_slug": "松阪市"
+  }
+ ],
+ "fukui": [
+  {
+   "city": "福井市",
+   "city_slug": "福井市"
+  },
+  {
+   "city": "敦賀市",
+   "city_slug": "敦賀市"
+  },
+  {
+   "city": "坂井市",
+   "city_slug": "坂井市"
+  },
+  {
+   "city": "越前市",
+   "city_slug": "越前市"
+  }
+ ],
+ "niigata": [
+  {
+   "city": "長岡市",
+   "city_slug": "長岡市"
+  },
+  {
+   "city": "上越市",
+   "city_slug": "上越市"
+  },
+  {
+   "city": "新潟市中央区",
+   "city_slug": "新潟市中央区"
+  },
+  {
+   "city": "新潟市西区",
+   "city_slug": "新潟市西区"
+  }
+ ],
+ "shimane": [
+  {
+   "city": "出雲市",
+   "city_slug": "出雲市"
+  },
+  {
+   "city": "松江市",
+   "city_slug": "松江市"
+  },
+  {
+   "city": "浜田市",
+   "city_slug": "浜田市"
+  },
+  {
+   "city": "益田市",
+   "city_slug": "益田市"
+  }
+ ],
+ "iwate": [
+  {
+   "city": "盛岡市",
+   "city_slug": "盛岡市"
+  },
+  {
+   "city": "一関市",
+   "city_slug": "一関市"
+  },
+  {
+   "city": "奥州市",
+   "city_slug": "奥州市"
+  },
+  {
+   "city": "花巻市",
+   "city_slug": "花巻市"
+  }
+ ],
+ "yamaguchi": [
+  {
+   "city": "下関市",
+   "city_slug": "下関市"
+  },
+  {
+   "city": "岩国市",
+   "city_slug": "岩国市"
+  },
+  {
+   "city": "山口市",
+   "city_slug": "山口市"
+  },
+  {
+   "city": "宇部市",
+   "city_slug": "宇部市"
+  }
+ ],
+ "aichi": [
+  {
+   "city": "豊田市",
+   "city_slug": "豊田市"
+  },
+  {
+   "city": "一宮市",
+   "city_slug": "一宮市"
+  },
+  {
+   "city": "豊橋市",
+   "city_slug": "豊橋市"
+  },
+  {
+   "city": "岡崎市",
+   "city_slug": "岡崎市"
+  }
+ ],
+ "kyoto": [
+  {
+   "city": "京都市伏見区",
+   "city_slug": "京都市伏見区"
+  },
+  {
+   "city": "京都市右京区",
+   "city_slug": "京都市右京区"
+  },
+  {
+   "city": "宇治市",
+   "city_slug": "宇治市"
+  },
+  {
+   "city": "京都市左京区",
+   "city_slug": "京都市左京区"
+  }
+ ],
+ "tottori": [
+  {
+   "city": "鳥取市",
+   "city_slug": "鳥取市"
+  },
+  {
+   "city": "米子市",
+   "city_slug": "米子市"
+  },
+  {
+   "city": "倉吉市",
+   "city_slug": "倉吉市"
+  },
+  {
+   "city": "境港市",
+   "city_slug": "境港市"
+  }
+ ],
+ "yamagata": [
+  {
+   "city": "山形市",
+   "city_slug": "山形市"
+  },
+  {
+   "city": "鶴岡市",
+   "city_slug": "鶴岡市"
+  },
+  {
+   "city": "酒田市",
+   "city_slug": "酒田市"
+  },
+  {
+   "city": "米沢市",
+   "city_slug": "米沢市"
+  }
+ ],
+ "yamanashi": [
+  {
+   "city": "甲府市",
+   "city_slug": "甲府市"
+  },
+  {
+   "city": "甲斐市",
+   "city_slug": "甲斐市"
+  },
+  {
+   "city": "笛吹市",
+   "city_slug": "笛吹市"
+  },
+  {
+   "city": "南アルプス市",
+   "city_slug": "南アルプス市"
+  }
+ ],
+ "okinawa": [
+  {
+   "city": "那覇市",
+   "city_slug": "那覇市"
+  },
+  {
+   "city": "うるま市",
+   "city_slug": "うるま市"
+  },
+  {
+   "city": "沖縄市",
+   "city_slug": "沖縄市"
+  },
+  {
+   "city": "宜野湾市",
+   "city_slug": "宜野湾市"
+  }
+ ],
+ "kumamoto": [
+  {
+   "city": "熊本市南区",
+   "city_slug": "熊本市南区"
+  },
+  {
+   "city": "熊本市東区",
+   "city_slug": "熊本市東区"
+  },
+  {
+   "city": "八代市",
+   "city_slug": "八代市"
+  },
+  {
+   "city": "熊本市北区",
+   "city_slug": "熊本市北区"
+  }
+ ]
+}

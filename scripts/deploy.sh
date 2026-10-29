@@ -64,6 +64,9 @@ case "${1:-}" in
     ;;
 
   ship)
+    # トップの住所候補（静的な索引 public/addr/）と、エリアタブの主な市区町村を data/kaigo.sqlite から作る。
+    # 入力のたびに D1 を読まないための仕組み。data/kaigo.sqlite が無ければここで止まる
+    npx tsx scripts/gen-addr-index.ts
     npx opennextjs-cloudflare build
     # 施設・法人ページの直接描画（lib/direct.ts）が使う CSS・アイコンの <link> をこのビルドから取り出す
     node scripts/gen-direct-shell.mjs
