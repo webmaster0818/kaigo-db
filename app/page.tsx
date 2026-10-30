@@ -292,7 +292,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                         <li key={slug}>
                           <Link href={`/area/${slug}/`} className="pref-card">
                             {/* 写真を入れるときは、ここに <span className="pref-media"><img …/></span> を置く（.pref-media の CSS は用意済み） */}
-                            <span className="pref-glyph" aria-hidden>{name.replace(/[都府県]$/, "")}</span>
                             <span className="pref-body card">
                               <span className="pref-name">{name}</span>
                               <span className="pref-count">

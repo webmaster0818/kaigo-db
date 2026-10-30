@@ -520,7 +520,7 @@ a.chip:hover {
 }
 
 /* 主要都道府県：大きな都道府県名（枠・背景なし）＋その下に白地の枠ボタン（名前と件数）。
-   写真を入れるときは .pref-glyph の代わりに <span class="pref-media"><img></span> を置く */
+   写真を入れるときは .pref-body の前に <span class="pref-media"><img></span> を置く */
 .pref-card {
   display: flex;
   flex-direction: column;
