@@ -12,6 +12,7 @@ import { bboxWhere, withinRadius, type LatLng } from "./geo";
 import { placeKey } from "./slug";
 import { SITE_URL } from "./site";
 import { CAPACITY_OK_SQL } from "./capacity";
+import { TYPE_CITY_MIN_INDEXABLE, type TypeCityCombo } from "./typeCity";
 
 // ---------------------------------------------------------------------------
 // 型
@@ -980,6 +981,23 @@ export const queries = {
       (await safeAll<{ slug: string }>(
         "SELECT slug FROM corporation WHERE facility_count > 0 ORDER BY facility_count DESC, slug",
       )).map((r) => r.slug),
+    );
+  },
+
+  /**
+   * 種別×市区町村ページを作る組み合わせ（index 対象施設3件以上）。agg 'typeCityCombos'（約3千行分の JSON・1行）。
+   * live は facility 全件を GROUP BY する（agg が無いときだけ。cachedAgg で6時間キャッシュ）。
+   * 条件・並び順は scripts/agg.sql・lib/direct.ts と同じ。
+   */
+  async typeCityCombos(): Promise<TypeCityCombo[]> {
+    return aggOrLive<TypeCityCombo[]>("typeCityCombos", async () =>
+      (await safeAll<{ t: string; p: string; c: string; n: number }>(
+        `SELECT service_type_slug AS t, pref_slug AS p, city_slug AS c, COUNT(*) AS n FROM facility
+         WHERE pref_slug <> '' AND city_slug <> ''
+         GROUP BY service_type_slug, pref_slug, city_slug
+         HAVING SUM(is_indexable) >= ${TYPE_CITY_MIN_INDEXABLE}
+         ORDER BY service_type_slug, pref_slug, city_slug`,
+      )).map((r) => [r.t, r.p, r.c, Number(r.n)] as TypeCityCombo),
     );
   },
 

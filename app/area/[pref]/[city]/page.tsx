@@ -6,6 +6,7 @@ import { NOT_A_RECOMMENDATION } from "@/lib/ranking";
 import { SLUG_TO_PREF } from "@/lib/slug";
 import { abs, decodeParam, NO_DATA, seg } from "@/lib/site";
 import { listRobots } from "@/lib/indexing";
+import { qualifiesTypeCity, TYPE_CITY_LABELS, typeCityPath } from "@/lib/typeCity";
 import Breadcrumb from "@/components/Breadcrumb";
 import FacilityTable from "@/components/FacilityTable";
 import SourceNote from "@/components/SourceNote";
@@ -67,14 +68,20 @@ export default async function CityPage({
   const withCapacity = rows.filter((r) => r.capacity != null).length;
   const withUrl = rows.filter((r) => r.official_url).length;
 
-  // 種別内訳（この市区町村の中）
-  const byType = new Map<string, { name: string; slug: string; n: number }>();
+  // 種別内訳（この市区町村の中）。index 対象施設が3件以上の種別は、種別×市区町村ページへリンクする
+  // （lib/typeCity.ts と同じ基準。rows は LIST_LIMIT 件まで。最大の市区町村でも219件なので全件で数えている）
+  const byType = new Map<string, { name: string; slug: string; n: number; ni: number }>();
   for (const r of rows) {
     const cur = byType.get(r.service_type_slug);
-    if (cur) cur.n += 1;
-    else byType.set(r.service_type_slug, { name: r.service_type, slug: r.service_type_slug, n: 1 });
+    const ix = Number(r.is_indexable) === 1 ? 1 : 0;
+    if (cur) {
+      cur.n += 1;
+      cur.ni += ix;
+    } else byType.set(r.service_type_slug, { name: r.service_type, slug: r.service_type_slug, n: 1, ni: ix });
   }
   const typeList = [...byType.values()].sort((a, b) => b.n - a.n);
+  const typeCityHref = (t: { slug: string; ni: number }): string | null =>
+    TYPE_CITY_LABELS[t.slug] && qualifiesTypeCity(t.ni) ? typeCityPath(t.slug, pref, city) : null;
 
   return (
     <main>
@@ -107,16 +114,24 @@ export default async function CityPage({
             </div>
           </dl>
 
-          {typeList.length > 1 && (
+          {(typeList.length > 1 || typeList.some((t) => typeCityHref(t))) && (
             <ul className="mb-6 flex flex-wrap gap-2">
               {typeList.map((t) => (
                 <li key={t.slug}>
-                  <Link
-                    href={`/type/${seg(t.slug)}/`}
-                    className="chip"
-                  >
-                    {t.name}<span className="chip-count">{t.n}</span>
-                  </Link>
+                  {typeCityHref(t) ? (
+                    // 種別×市区町村ページは Next のルートが無い（worker.ts で直接描画）ので、
+                    // ブラウザ内遷移・プリフェッチをしない通常のリンクにする
+                    <a href={typeCityHref(t)!} className="chip">
+                      {t.name}<span className="chip-count">{t.n}</span>
+                    </a>
+                  ) : (
+                    <Link
+                      href={`/type/${seg(t.slug)}/`}
+                      className="chip"
+                    >
+                      {t.name}<span className="chip-count">{t.n}</span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

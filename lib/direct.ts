@@ -17,6 +17,17 @@ import type { Corporation, Facility } from "./db";
 import { isValidJapanLatLng } from "./geo";
 import { facilityRobots, isIndexableFacility, listRobots, type RobotsDirective } from "./indexing";
 import { CAPACITY_OK_SQL } from "./capacity";
+import { NOT_A_RECOMMENDATION } from "./ranking";
+import { SLUG_TO_PREF } from "./slug";
+import { TYPE_GUIDE_CAVEAT, TYPE_GUIDES } from "./typeGuide";
+import {
+  CAPACITY_BANDS,
+  qualifiesTypeCity,
+  TYPE_CITY_LABELS,
+  TYPE_CITY_MIN_INDEXABLE,
+  typeCityPath,
+  type TypeCityCombo,
+} from "./typeCity";
 import {
   abs,
   LICENSE_NAME,
@@ -608,6 +619,310 @@ export async function renderHojin(db: D1Database, slug: string, shell: DirectShe
     ) +
     `</p>` +
     sourceNote(meta.acquired_on);
+
+  return page(shell, metaInfo, main);
+}
+
+// ---------------------------------------------------------------------------
+// 種別×市区町村ページ（/type/{種別}/{都道府県}/{市区町村}/・2026-11-01 okina 承認）
+// ---------------------------------------------------------------------------
+// Next のページは持たない（このページは最初から直接描画だけ。CPU 上限対策・設計は README「種別×市区町村ページ」）。
+// D1 読み取り：施設の取得1回（idx_facility_type_city で該当行のみ・実測 約2×件数+1行。最大130件で261行）。
+// 出典情報（meta）・組み合わせ一覧（agg 'typeCityCombos'）・都道府県内訳（agg 'typePref:<種別>'）は
+// lib/db.ts と同じキーの cachedAgg（isolate 内メモ＋Cache API・6時間）で、外れても1行ずつ。
+// 描画済み HTML は worker.ts が Cache API に保存する（同じ URL の2回目以降は D1 を読まない）。
+// index 対象施設が3件未満・存在しない組み合わせは null（Next の 404）。
+
+async function readAggValue<T>(db: D1Database, key: string): Promise<T | undefined> {
+  try {
+    const r = await db.prepare("SELECT value FROM agg WHERE key = ?").bind(key).first<{ value: string | null }>();
+    return r?.value == null ? undefined : (JSON.parse(r.value) as T);
+  } catch {
+    return undefined;
+  }
+}
+
+function getTypeCityCombos(db: D1Database): Promise<TypeCityCombo[]> {
+  return cachedAgg(
+    "typeCityCombos",
+    async () => {
+      const pre = await readAggValue<TypeCityCombo[]>(db, "typeCityCombos");
+      if (pre && pre.length > 0) return pre;
+      // agg が無いときだけ（scripts/agg.sql と同じ条件・並び順）
+      const rows = await all<{ t: string; p: string; c: string; n: number }>(
+        db,
+        `SELECT service_type_slug AS t, pref_slug AS p, city_slug AS c, COUNT(*) AS n FROM facility
+         WHERE pref_slug <> '' AND city_slug <> ''
+         GROUP BY service_type_slug, pref_slug, city_slug
+         HAVING SUM(is_indexable) >= ${TYPE_CITY_MIN_INDEXABLE}
+         ORDER BY service_type_slug, pref_slug, city_slug`,
+        [],
+      );
+      return rows.map((r) => [r.t, r.p, r.c, Number(r.n)] as TypeCityCombo);
+    },
+    (v) => v.length === 0,
+  );
+}
+
+function getTypePref(db: D1Database, type: string): Promise<Array<{ pref_slug: string; prefecture: string; n: number }>> {
+  return cachedAgg(
+    `typePref:${type}`,
+    async () => {
+      const pre = await readAggValue<Array<{ pref_slug: string; prefecture: string; n: number }>>(db, `typePref:${type}`);
+      if (pre && pre.length > 0) return pre;
+      return all<{ pref_slug: string; prefecture: string; n: number }>(
+        db,
+        `SELECT pref_slug, prefecture, COUNT(*) AS n FROM facility
+         WHERE service_type_slug = ? AND pref_slug <> '' GROUP BY pref_slug, prefecture ORDER BY n DESC`,
+        [type],
+      );
+    },
+    (v) => v.length === 0,
+  );
+}
+
+function fmtNum(n: number): string {
+  return n.toLocaleString("ja-JP");
+}
+
+/** 中央値（偶数個は中央2つの平均。小数は1桁まで） */
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  const v = s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+  return Math.round(v * 10) / 10;
+}
+
+function typeCityTable(rows: Facility[]): string {
+  const cap = (f: Facility) => (f.capacity == null ? noData.s : `<span class="tabular-nums">${kids(f.capacity, "人")}</span>`);
+  const corp = (f: Facility) =>
+    f.corporation_name
+      ? f.corporation_slug
+        ? link(`/hojin/${seg(f.corporation_slug)}/`, "hover:text-accent hover:underline", kids(f.corporation_name)).s
+        : kids(f.corporation_name)
+      : noData.s;
+  let s =
+    `<div class="card hidden md:block"><table class="dtable w-full border-collapse text-sm"><thead>` +
+    `<tr class="border-b border-line-strong text-left text-xs text-muted">` +
+    `<th scope="col" class="py-2 pr-3 font-medium">事業所名</th>` +
+    `<th scope="col" class="py-2 pr-3 font-medium">所在地</th>` +
+    `<th scope="col" class="w-20 py-2 pr-3 text-right font-medium">定員</th>` +
+    `<th scope="col" class="w-56 py-2 font-medium">運営法人</th>` +
+    `</tr></thead><tbody>`;
+  for (const f of rows) {
+    s +=
+      `<tr class="border-b border-line align-top hover:bg-tint">` +
+      `<td class="py-2 pr-3">${link(`/facility/${seg(f.id)}/`, "font-medium text-ink underline-offset-2 hover:text-accent hover:underline", kids(f.name)).s}</td>` +
+      `<td class="py-2 pr-3 text-muted">${f.address ? kids(f.address) : noData.s}</td>` +
+      `<td class="py-2 pr-3 text-right">${cap(f)}</td>` +
+      `<td class="py-2 text-muted">${corp(f)}</td>` +
+      `</tr>`;
+  }
+  s += `</tbody></table></div><ul class="space-y-3 md:hidden">`;
+  for (const f of rows) {
+    s +=
+      `<li class="card p-4">` +
+      link(`/facility/${seg(f.id)}/`, "font-medium text-ink underline-offset-2 hover:underline", kids(f.name)).s +
+      `<dl class="mt-2 grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-xs">` +
+      `<dt class="text-muted">所在地</dt><dd>${f.address ? kids(f.address) : noData.s}</dd>` +
+      `<dt class="text-muted">定員</dt><dd>${cap(f)}</dd>` +
+      `<dt class="text-muted">運営法人</dt><dd>${corp(f)}</dd>` +
+      `</dl></li>`;
+  }
+  s += `</ul>`;
+  return s;
+}
+
+function chips(items: Array<{ href: string; label: string; n: number }>): string {
+  return (
+    `<ul class="flex flex-wrap gap-2">` +
+    items
+      .map((i) => `<li>${link(i.href, "chip", kids(i.label, raw(`<span class="chip-count">${esc(fmtNum(i.n))}</span>`))).s}</li>`)
+      .join("") +
+    `</ul>`
+  );
+}
+
+export async function renderTypeCity(
+  db: D1Database,
+  type: string,
+  pref: string,
+  city: string,
+  shell: DirectShell,
+): Promise<string | null> {
+  const label = TYPE_CITY_LABELS[type];
+  const prefName = SLUG_TO_PREF[pref];
+  if (!label || !prefName || !city) return null;
+
+  // 1件の市区町村で最大130件（2026-09-29 取得分）。念のため上限を掛ける
+  const rows = await all<Facility>(
+    db,
+    `SELECT ${FACILITY_COLS} FROM facility
+     WHERE service_type_slug = ? AND pref_slug = ? AND city_slug = ?
+     ORDER BY name LIMIT 500`,
+    [type, pref, city],
+  );
+  const indexable = rows.filter((r) => Number(r.is_indexable) === 1).length;
+  if (rows.length === 0 || !qualifiesTypeCity(indexable)) return null;
+
+  const [meta, combos, typePref] = await Promise.all([getMeta(db), getTypeCityCombos(db), getTypePref(db, type)]);
+
+  const first = rows[0];
+  const cityName = first.city || city;
+  const typeName = first.service_type;
+  const where = `${prefName}${cityName}`;
+  const n = rows.length;
+  const acquired = first.acquired_on ?? meta.acquired_on ?? null;
+  const path = typeCityPath(type, pref, city);
+
+  // ---- 公表データからの集計（このページの組み合わせだけ） ----
+  const caps = rows.map((r) => r.capacity).filter((c): c is number => c != null);
+  const capSum = caps.reduce((a, b) => a + b, 0);
+  const capMedian = median(caps);
+  const withUrl = rows.filter((r) => r.official_url).length;
+  const corpCounts = new Map<string, { name: string; slug: string; n: number }>();
+  let noCorpNo = 0;
+  for (const r of rows) {
+    if (!r.corporation_slug) {
+      noCorpNo += 1;
+      continue;
+    }
+    const cur = corpCounts.get(r.corporation_slug);
+    if (cur) cur.n += 1;
+    else corpCounts.set(r.corporation_slug, { name: r.corporation_name ?? r.corporation_slug, slug: r.corporation_slug, n: 1 });
+  }
+  const corpMulti = [...corpCounts.values()].filter((c) => c.n >= 2).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, "ja"));
+  const bands = CAPACITY_BANDS.map((b) => ({ label: b.label, n: caps.filter((c) => c >= b.min && c <= b.max).length })).filter(
+    (b) => b.n > 0,
+  );
+  const prefTotal = typePref.find((p) => p.pref_slug === pref)?.n ?? 0;
+  const share = prefTotal > 0 ? ((n / prefTotal) * 100).toFixed(1) : null;
+
+  // ---- 関連ページ（同じ基準で作ったページだけにリンクする） ----
+  const otherTypes = combos
+    .filter(([t, p, c]) => p === pref && c === city && t !== type && TYPE_CITY_LABELS[t])
+    .map(([t, , , cnt]) => ({ href: typeCityPath(t, pref, city), label: `${cityName}の${TYPE_CITY_LABELS[t]}`, n: cnt }));
+  const samePref = combos
+    .filter(([t, p, c]) => t === type && p === pref && c !== city)
+    .sort((a, b) => b[3] - a[3] || a[2].localeCompare(b[2], "ja"))
+    .map(([, , c, cnt]) => ({ href: typeCityPath(type, pref, c), label: c, n: cnt }));
+
+  const metaInfo = {
+    title: `${where}の${label}一覧（${n}件）`,
+    description: `${where}の${typeName}${n}件の一覧です。所在地・定員・運営法人を、厚生労働省の公表データ${acquired ? `（取得日 ${acquired}）` : ""}にもとづいて掲載しています。`,
+    canonical: abs(path),
+    robots: { index: true, follow: true },
+  };
+
+  const itemList = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${where}の${label}`,
+    numberOfItems: n,
+    itemListElement: rows.map((f, i) => ({ "@type": "ListItem", position: i + 1, name: f.name, url: abs(`/facility/${seg(f.id)}/`) })),
+  };
+
+  const stat = (k: string, v: string) => `<div><dt>${esc(k)}</dt><dd class="tabular-nums">${kids(v)}</dd></div>`;
+  const guide = TYPE_GUIDES[type];
+
+  let main =
+    jsonLdScript(itemList) +
+    breadcrumb([
+      { name: "ホーム", href: "/" },
+      { name: "サービス種別から探す", href: "/type/" },
+      { name: typeName, href: `/type/${seg(type)}/` },
+      { name: prefName, href: `/area/${seg(pref)}/` },
+      { name: `${cityName}の${label}` },
+    ]) +
+    `<p class="eyebrow">${kids(typeName)}</p>` +
+    `<h1 class="mt-3 mb-6">${kids(where, "の", label)}</h1>` +
+    `<p class="mb-6 max-w-3xl text-sm leading-relaxed">` +
+    kids(
+      `${where}の${typeName}は、${SOURCE_NAME}の公表データ${acquired ? `（取得日 ${acquired}）` : ""}で${fmtNum(n)}件です。`,
+      share != null ? `${prefName}全体の${fmtNum(prefTotal)}件のうち${share}%にあたります。` : "",
+      `運営法人は、法人番号で数えて${fmtNum(corpCounts.size)}法人です${noCorpNo > 0 ? `（法人番号の記載がない施設${fmtNum(noCorpNo)}件を除く）` : ""}。`,
+      caps.length > 0
+        ? `定員の記載がある${fmtNum(caps.length)}件の定員の合計は${fmtNum(capSum)}人です。`
+        : "定員はいずれの施設にも記載がありません。",
+    ) +
+    `</p>` +
+    `<dl class="stat-row mb-8">` +
+    stat("掲載施設", fmtNum(n)) +
+    stat("定員の記載あり", fmtNum(caps.length)) +
+    stat("定員の合計（記載分）", caps.length > 0 ? `${fmtNum(capSum)}人` : NO_DATA) +
+    stat("定員の中央値（記載分）", capMedian != null ? `${capMedian}人` : NO_DATA) +
+    stat("公式URLあり", fmtNum(withUrl)) +
+    `</dl>`;
+
+  // 定員の内訳
+  if (bands.length > 0) {
+    main +=
+      `<section class="mb-10"><h2 class="mb-4">定員の内訳</h2>` +
+      `<div class="card max-w-md"><table class="dtable w-full border-collapse text-sm"><thead>` +
+      `<tr class="border-b border-line-strong text-left text-xs text-muted"><th scope="col" class="py-2 pr-3 font-medium">定員</th><th scope="col" class="py-2 text-right font-medium">施設数</th></tr></thead><tbody>` +
+      bands.map((b) => `<tr class="border-b border-line"><td class="py-2 pr-3">${esc(b.label)}</td><td class="py-2 text-right tabular-nums">${esc(fmtNum(b.n))}</td></tr>`).join("") +
+      (n - caps.length > 0
+        ? `<tr class="border-b border-line"><td class="py-2 pr-3 text-muted">${NO_DATA}</td><td class="py-2 text-right tabular-nums">${esc(fmtNum(n - caps.length))}</td></tr>`
+        : "") +
+      `</tbody></table></div>` +
+      `<p class="mt-3 text-xs text-muted">出典データの「定員」の値をそのまま数えています。記載がないことは、定員が少ないことを意味するものではありません。</p>` +
+      `</section>`;
+  }
+
+  // 施設一覧
+  main +=
+    `<section class="mb-10"><h2 class="mb-4">${kids("施設一覧", raw(`<span class="ml-2 text-xs font-normal text-muted">${esc(fmtNum(n))}件</span>`))}</h2>` +
+    `<p class="mb-4 text-xs leading-relaxed text-muted">${kids("事業所名の順に表示しています。", raw(`<span class="ml-1 font-bold text-ink">${esc(NOT_A_RECOMMENDATION)}</span>`))}</p>` +
+    typeCityTable(rows) +
+    `<p class="mt-4 text-xs text-muted">${esc(`定員・公式URL・運営法人が「${NO_DATA}」の施設は、出典データに記載がないものです（当サイトで推定した値は掲載していません）。`)}</p>` +
+    `</section>`;
+
+  // 同じ法人が複数運営している場合の内訳
+  if (corpMulti.length > 0) {
+    main +=
+      `<section class="mb-10"><h2 class="mb-4">${kids(cityName, "で2施設以上を運営する法人")}</h2>` +
+      chips(corpMulti.map((c) => ({ href: `/hojin/${seg(c.slug)}/`, label: c.name, n: c.n }))) +
+      `<p class="mt-3 text-xs text-muted">数字は${esc(`${cityName}の${typeName}`)}のうち、その法人が運営する施設の数です（法人番号で集計）。</p>` +
+      `</section>`;
+  }
+
+  // 制度上の位置づけ
+  if (guide) {
+    main +=
+      `<section class="mb-10"><h2 class="mb-4">${kids(guide.short, "とは")}</h2>` +
+      `<dl class="card">` +
+      row("概要", kids(guide.summary)) +
+      row("主な対象者", kids(guide.target)) +
+      row("設置・指定", kids(guide.operator)) +
+      `</dl>` +
+      `<p class="mt-3 text-xs leading-relaxed text-muted">${esc(TYPE_GUIDE_CAVEAT)}</p>` +
+      `</section>`;
+  }
+
+  // 関連ページ
+  main +=
+    `<section class="mb-10"><h2 class="mb-4">関連するページ</h2>` +
+    `<ul class="mb-6 space-y-2 text-sm">` +
+    `<li>${link(`/area/${seg(pref)}/${seg(city)}/`, "text-accent hover:underline", kids(where, "の介護施設・事業所一覧（全種別）")).s}</li>` +
+    `<li>${link(`/area/${seg(pref)}/`, "text-accent hover:underline", kids(prefName, "の市区町村一覧")).s}</li>` +
+    `<li>${link(`/type/${seg(type)}/`, "text-accent hover:underline", kids("全国の", typeName)).s}</li>` +
+    `</ul>` +
+    (otherTypes.length > 0 ? `<h3 class="mb-3 text-sm font-bold">${kids(cityName, "のほかの種別")}</h3><div class="mb-6">${chips(otherTypes)}</div>` : "") +
+    (samePref.length > 0
+      ? `<h3 class="mb-3 text-sm font-bold">${kids(prefName, "のほかの市区町村の", label)}</h3>${chips(samePref)}`
+      : "") +
+    `</section>`;
+
+  main +=
+    `<p class="note px-4 py-3 text-xs leading-relaxed text-muted">` +
+    esc(
+      `このページは、${SOURCE_NAME}の公表データ${acquired ? `（取得日 ${acquired}。件数・定員はこの時点の値）` : ""}のうち、` +
+        `${where}に所在する${typeName}をまとめたものです。件数は事業所番号とサービス種別の組み合わせごとに数えています。` +
+        `公式URLか定員の記載がある施設が${TYPE_CITY_MIN_INDEXABLE}件以上ある市区町村についてのみ、このページを作成しています。`,
+    ) +
+    `</p>` +
+    sourceNote(acquired);
 
   return page(shell, metaInfo, main);
 }

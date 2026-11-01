@@ -107,3 +107,20 @@ FROM (SELECT pref_slug, city_slug FROM area WHERE facility_count > 0 ORDER BY pr
 INSERT OR REPLACE INTO agg (key, value)
 SELECT 'corporationSlugs', COALESCE(json_group_array(slug), '[]')
 FROM (SELECT slug FROM corporation WHERE facility_count > 0 ORDER BY facility_count DESC, slug);
+
+-- 種別×市区町村ページ（/type/{種別}/{都道府県}/{市区町村}/・/type/sitemap.xml）を作る組み合わせ。
+-- index 対象施設が3件以上（lib/typeCity.ts の TYPE_CITY_MIN_INDEXABLE と揃える）。
+-- [[service_type_slug, pref_slug, city_slug, 施設数], ...]。並びは種別・都道府県・市区町村の順
+-- （lib/db.ts typeCityCombos の live・lib/direct.ts の live と同じ条件・並び順）。
+-- 2026-09-29 取得分で 2,965 件。本番ではこの1文だけを流せる（README「種別×市区町村ページ」参照）。
+-- BEGIN typeCityCombos
+INSERT OR REPLACE INTO agg (key, value)
+SELECT 'typeCityCombos', COALESCE(json_group_array(json_array(service_type_slug, pref_slug, city_slug, n)), '[]')
+FROM (
+  SELECT service_type_slug, pref_slug, city_slug, COUNT(*) AS n FROM facility
+  WHERE pref_slug <> '' AND city_slug <> ''
+  GROUP BY service_type_slug, pref_slug, city_slug
+  HAVING SUM(is_indexable) >= 3
+  ORDER BY service_type_slug, pref_slug, city_slug
+);
+-- END typeCityCombos

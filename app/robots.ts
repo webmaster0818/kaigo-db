@@ -17,6 +17,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     // インデックスと子 sitemap をすべて載せる（子は /sitemap_index.xml と同じ）
-    sitemap: [abs("/sitemap_index.xml"), abs("/sitemap.xml"), abs("/hojin/sitemap.xml")],
+    sitemap: [abs("/sitemap_index.xml"), abs("/sitemap.xml"), abs("/hojin/sitemap.xml"), abs("/type/sitemap.xml")],
   };
 }

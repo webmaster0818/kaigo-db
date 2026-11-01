@@ -2,7 +2,7 @@ import { abs } from "@/lib/site";
 
 // sitemap インデックス。D1 は読まない。
 // 子 sitemap を増やしたらここにも足すこと（各5万URL以下）。
-const CHILDREN = ["/sitemap.xml", "/hojin/sitemap.xml"];
+const CHILDREN = ["/sitemap.xml", "/hojin/sitemap.xml", "/type/sitemap.xml"];
 
 export function GET(): Response {
   const body =

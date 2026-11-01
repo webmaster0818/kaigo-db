@@ -13,7 +13,7 @@ import handler from "./.open-next/worker.js";
 export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-next/worker.js";
 
 import type { D1Database } from "@cloudflare/workers-types";
-import { renderFacility, renderHojin, type DirectShell } from "./lib/direct";
+import { renderFacility, renderHojin, renderTypeCity, type DirectShell } from "./lib/direct";
 // scripts/gen-direct-shell.mjs がビルド後に作る（CSS・アイコンの <link>）。無ければデプロイが失敗する
 import SHELL_JSON from "./lib/direct-shell.generated.json";
 const SHELL = SHELL_JSON as DirectShell;
@@ -148,7 +148,7 @@ function htmlCacheKey(request: Request, url: URL, env: Env): Request | null {
 // sitemap も同じ仕組みで保存する（2026-10-28）。D1 から毎回組み立てると CPU 66〜181ms かかり
 // （10/25 の tail）、上限超過（503）で GSC の読み込みエラーになった可能性がある。中身は load とデプロイの
 // ときしか変わらない。件数が極端に少ない（D1 不調時の可能性がある）ものは保存しない。
-const CACHED_XML = new Set(["/sitemap.xml", "/hojin/sitemap.xml"]);
+const CACHED_XML = new Set(["/sitemap.xml", "/hojin/sitemap.xml", "/type/sitemap.xml"]);
 const XML_MIN_LOC = 1000;
 
 function isCacheableBody(pathname: string, ct: string): boolean {
@@ -225,6 +225,64 @@ async function renderDirect(request: Request, url: URL, env: Env): Promise<Respo
   });
 }
 
+// ---------------------------------------------------------------------------
+// 種別×市区町村ページ（/type/{種別}/{都道府県}/{市区町村}/・2026-11-01・lib/direct.ts renderTypeCity）
+// ---------------------------------------------------------------------------
+// Next のルートは無く、ここだけで描画する（CPU 上限対策。施設・法人ページと同じ文字列の組み立て）。
+// - 描画済み HTML を Cache API に保存し、同じ URL の2回目以降は D1 を読まない（キーはクエリを外した URL）。
+// - クエリ付き（?utm_… など）でも同じ内容を返す（canonical はクエリなし）。キャッシュもクエリなしと共有。
+// - 該当なし（index 対象施設3件未満・存在しない組み合わせ）は null → Next の 404。
+// - D1 の失敗は 503（404 にすると検索エンジンに「消えた」と伝わるため）。
+const TYPE_CITY_PATH = /^\/type\/([^/]+)\/([^/]+)\/([^/]+)\/$/;
+
+async function serveTypeCity(request: Request, url: URL, env: Env, ctx: Ctx): Promise<Response | null> {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  if (isRscRequest(request) || !env.DB) return null;
+  const m = TYPE_CITY_PATH.exec(url.pathname);
+  if (!m) return null;
+  let type: string, pref: string, city: string;
+  try {
+    [type, pref, city] = [decodeURIComponent(m[1]), decodeURIComponent(m[2]), decodeURIComponent(m[3])];
+  } catch {
+    return null;
+  }
+  const bare = new URL(url.toString());
+  bare.search = "";
+  const key = htmlCacheKey(new Request(bare.toString(), { method: "GET" }), bare, env);
+  const cache = (caches as unknown as { default: Cache }).default;
+  if (key) {
+    try {
+      const hit = await cache.match(key);
+      if (hit) return fromCache(hit, request.method === "HEAD");
+    } catch {
+      // Cache API が使えなくても描画して返す
+    }
+  }
+  let html: string | null;
+  try {
+    html = await renderTypeCity(env.DB, type, pref, city, SHELL);
+  } catch (e) {
+    console.error("[type-city] 失敗:", (e as Error).message);
+    return new Response("一時的にデータベースに接続できませんでした。時間をおいて再度お試しください。\n", {
+      status: 503,
+      headers: { "content-type": "text/plain; charset=utf-8", "retry-after": "600", "cache-control": "no-store" },
+    });
+  }
+  if (!html) return null;
+  const res = new Response(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      link: SHELL.linkHeader,
+      vary: "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-direct-html": "1",
+    },
+  });
+  if (key) ctx.waitUntil(storeHtml(cache, key, res.clone(), bare.pathname).catch(() => {}));
+  return request.method === "HEAD" ? new Response(null, { status: 200, headers: res.headers }) : res;
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     let url = new URL(request.url);
@@ -253,6 +311,8 @@ export default {
       request = new Request(stripped.toString(), request);
       url = stripped;
     }
+    const typeCity = await serveTypeCity(request, url, env, ctx);
+    if (typeCity) return typeCity;
     const direct = await renderDirect(request, url, env);
     if (direct) return direct;
 
