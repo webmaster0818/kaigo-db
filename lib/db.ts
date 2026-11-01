@@ -427,6 +427,59 @@ async function cachedPlace<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return value;
 }
 
+// ---------------------------------------------------------------------------
+// 全件読み（place の LIKE）の回数上限（2026-11-01 既定案A）
+// ---------------------------------------------------------------------------
+// 見つからない入力が続くと、LIKE 1回ごとに place 全件（約6.2万行）を読む。
+// LIKE の実行を「1データセンターあたり1時間 PLACE_SCAN_MAX 回」までにする（Cache API で数える。
+// worker.ts の overSearchLimit と同じ型。全体での厳密な回数ではなくデータセンターごと）。
+// 上限に達したら LIKE を呼ばず PlaceScanLimited を投げる。cachedPlace は例外を保存しないので、
+// 上限で飛ばした「見つからない」は placeMemo・Cache API・noContainsMatch のどれにも残らない。
+// 1)の key IN (...)（主キー検索）は対象外。見つかる入力は今までどおり。
+const PLACE_SCAN_MAX = 2;
+const PLACE_SCAN_WINDOW_SEC = 60 * 60;
+class PlaceScanLimited extends Error {
+  constructor() {
+    super("place scan limit reached");
+    this.name = "PlaceScanLimited";
+  }
+}
+async function allowPlaceScan(): Promise<boolean> {
+  // Cache API が無い環境（開発機の next dev・sqlite）では数えない
+  const cacheStore = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
+  if (!cacheStore) return true;
+  const win = Math.floor(Date.now() / 1000 / PLACE_SCAN_WINDOW_SEC);
+  const key = new Request(`${SITE_URL}/__placescan/${win}`);
+  try {
+    const hit = await cacheStore.match(key);
+    const n = hit ? Number(await hit.text()) || 0 : 0;
+    if (n >= PLACE_SCAN_MAX) return false;
+    await cacheStore.put(
+      key,
+      new Response(String(n + 1), { headers: { "cache-control": `public, max-age=${PLACE_SCAN_WINDOW_SEC}` } }),
+    );
+  } catch {
+    // 数えられないときは通す（従来の動き）
+  }
+  return true;
+}
+async function placeScanOrThrow(): Promise<void> {
+  if (!(await allowPlaceScan())) throw new PlaceScanLimited();
+}
+
+/**
+ * resolvePlace の中身（キャッシュあり）。全件読みの上限に当たると PlaceScanLimited を投げる
+ * （4) の「〇〇駅」の引き直しでも上限を外へ伝え、外側の「見つからない」を保存しないため）。
+ */
+async function resolvePlaceOrThrow(input: string): Promise<PlaceHit | undefined> {
+  const k = placeKey(input);
+  if (k.length < 2) return undefined;
+  const hit = await cachedPlace(`resolve:${k}`, () => resolvePlaceUncached(k));
+  // 見つからない＝3) の「%入力%」が0件だった（入力が長すぎる場合も同じく0件）
+  if (!hit) rememberNoContains(k);
+  return hit;
+}
+
 /** resolvePlace の本体（キャッシュなし）。手順はそのまま */
 async function resolvePlaceUncached(k: string): Promise<PlaceHit | undefined> {
   // 1) 入力の先頭に一致する最長キー
@@ -442,6 +495,7 @@ async function resolvePlaceUncached(k: string): Promise<PlaceHit | undefined> {
   if (k.length <= PLACE_KEY_MAX) {
     // 2) 入力で始まるキー
     const esc = likeEscape(k);
+    await placeScanOrThrow();
     const startsWith = await safeGet<PlaceRow>(
       `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
        ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
@@ -450,6 +504,7 @@ async function resolvePlaceUncached(k: string): Promise<PlaceHit | undefined> {
     if (startsWith) return { ...startsWith, match: "startsWith" };
 
     // 3) 入力を含むキー
+    await placeScanOrThrow();
     const contains = await safeGet<PlaceRow>(
       `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
        ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT 1`,
@@ -460,7 +515,7 @@ async function resolvePlaceUncached(k: string): Promise<PlaceHit | undefined> {
   // 4) 「〇〇駅」→「〇〇」で引き直す
   const withoutStation = k.replace(/駅(前|北口|南口|東口|西口)?$/, "");
   if (withoutStation !== k && withoutStation.length >= 2) {
-    const again = await queries.resolvePlace(withoutStation);
+    const again = await resolvePlaceOrThrow(withoutStation);
     if (again) return { ...again, match: "station" };
   }
   return undefined;
@@ -828,12 +883,13 @@ export const queries = {
    *      同名の地名の代表点を返し、そのことを画面に明示する）
    */
   async resolvePlace(input: string): Promise<PlaceHit | undefined> {
-    const k = placeKey(input);
-    if (k.length < 2) return undefined;
-    const hit = await cachedPlace(`resolve:${k}`, () => resolvePlaceUncached(k));
-    // 見つからない＝3) の「%入力%」が0件だった（入力が長すぎる場合も同じく0件）
-    if (!hit) rememberNoContains(k);
-    return hit;
+    try {
+      return await resolvePlaceOrThrow(input);
+    } catch (e) {
+      // 全件読みの上限で 2)・3) を飛ばした：「見つからない」として返すが、どこにも保存しない
+      if (e instanceof PlaceScanLimited) return undefined;
+      throw e;
+    }
   },
 
   /**
@@ -845,13 +901,20 @@ export const queries = {
     const k = placeKey(input);
     if (k.length < 2 || k.length > PLACE_KEY_MAX) return [];
     if (noContainsMatch.has(k)) return [];
-    return cachedPlace(`suggest:${k}/${limit}`, () =>
-      safeAll<PlaceRow>(
-        `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
-         ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT ?`,
-        [`%${likeEscape(k)}%`, limit],
-      ),
-    );
+    try {
+      return await cachedPlace(`suggest:${k}/${limit}`, async () => {
+        await placeScanOrThrow();
+        return safeAll<PlaceRow>(
+          `SELECT ${PLACE_COLS} FROM place WHERE key LIKE ? ESCAPE '\\'
+           ORDER BY facility_count DESC, LENGTH(key) ASC LIMIT ?`,
+          [`%${likeEscape(k)}%`, limit],
+        );
+      });
+    } catch (e) {
+      // 上限で飛ばした：候補なしで返す（保存しない）
+      if (e instanceof PlaceScanLimited) return [];
+      throw e;
+    }
   },
 
   // ---- トップページに出す実測値 ----
