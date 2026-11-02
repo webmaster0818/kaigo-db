@@ -286,6 +286,10 @@ async function serveTypeCity(request: Request, url: URL, env: Env, ctx: Ctx): Pr
 export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     let url = new URL(request.url);
+    // www 付き・http は正規の https://kaigo-database.com へ 301（2026-11-02：200 で同じ内容を返していた）
+    if (url.hostname === "www.kaigo-database.com" || (url.hostname === "kaigo-database.com" && url.protocol === "http:")) {
+      return Response.redirect(`https://kaigo-database.com${url.pathname}${url.search}`, 301);
+    }
     const asn = Number((request as unknown as { cf?: { asn?: number } }).cf?.asn ?? 0);
     if (isSearchRequest(url) && (BOT_UA.test(request.headers.get("user-agent") ?? "") || CLOUD_ASN.has(asn))) {
       return new Response("Search results are not available to crawlers (see /robots.txt).\n", {
