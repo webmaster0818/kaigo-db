@@ -158,14 +158,23 @@ function head(shell: DirectShell, m: { title: string; description: string; robot
   );
 }
 
+// components/LogoMark.tsx と同じ図形（変えるときは両方そろえる）
+const LOGO_MARK =
+  `<svg viewBox="20 34 472 472" class="h-9 w-9 shrink-0 md:h-10 md:w-10" aria-hidden="true">` +
+  `<circle cx="256" cy="270" r="230" fill="#FDF1E7"/>` +
+  `<path d="M256,430 C150,360 110,300 110,250 C110,200 150,170 190,170 C226,170 248,192 256,214" fill="none" stroke="#C0551F" stroke-width="36" stroke-linecap="round"/>` +
+  `<path d="M256,430 C362,360 402,300 402,250 C402,200 362,170 322,170 C286,170 264,192 256,214" fill="none" stroke="#4F7C5A" stroke-width="36" stroke-linecap="round"/>` +
+  `<circle cx="168" cy="104" r="40" fill="#C0551F"/><circle cx="344" cy="110" r="34" fill="#4F7C5A"/></svg>`;
+
 function siteHeader(): string {
   return (
     `<header class="sticky top-0 z-20 border-b border-line-strong bg-paper/95 backdrop-blur">` +
     `<div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:py-4">` +
     link(
       "/",
-      "flex items-baseline gap-3",
-      `<span class="font-display text-xl font-bold tracking-wider text-ink">${esc(SITE_NAME)}</span>` +
+      "flex items-center gap-3",
+      LOGO_MARK +
+        `<span class="font-display text-xl font-bold tracking-wider text-ink">${esc(SITE_NAME)}</span>` +
         `<span class="text-[11px] tracking-wider text-muted">${esc(SITE_TAGLINE)}</span>`,
     ).s +
     `<nav class="-mx-4 w-full overflow-x-auto px-4 md:mx-0 md:ml-auto md:w-auto md:px-0"><ul class="flex gap-x-5 whitespace-nowrap text-[13px] md:flex-wrap">` +
