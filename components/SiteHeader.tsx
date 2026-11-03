@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
+import LogoMark from "@/components/LogoMark";
 
 const NAV = [
   { href: "/", label: "住所から探す" },
@@ -14,7 +15,8 @@ export default function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-line-strong bg-paper/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:py-4">
-        <Link href="/" className="flex items-baseline gap-3">
+        <Link href="/" className="flex items-center gap-3">
+          <LogoMark className="h-9 w-9 shrink-0 md:h-10 md:w-10" />
           <span className="font-display text-xl font-bold tracking-wider text-ink">{SITE_NAME}</span>
           <span className="text-[11px] tracking-wider text-muted">{SITE_TAGLINE}</span>
         </Link>

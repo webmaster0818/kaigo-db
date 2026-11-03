@@ -158,13 +158,13 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           サイトの説明文（「記載なし」・推測で補完しない・口コミ等を載せない）は 08 の掲載データの節に移した。
           ===================================================================== */}
       <section className="pt-1 md:pt-4">
-        <h1 className="mb-4 text-[1.6rem] leading-[1.4] md:mb-6 md:text-[2.5rem]">
-          公表データにもとづく
-          <br />
-          介護施設の検索
-        </h1>
-        {/* 写真に差し替えるときは components/HeroVisual.tsx の HERO.src を設定する（今は何も表示しない） */}
-        <HeroVisual />
+        <HeroVisual>
+          <h1 className="text-[1.3rem] leading-[1.5] md:text-[2.5rem]">
+            公表データにもとづく
+            <br />
+            介護施設の検索
+          </h1>
+        </HeroVisual>
 
         <div id="search" className="scroll-mt-24">
           <PlaceSearchForm
