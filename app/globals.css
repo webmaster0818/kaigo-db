@@ -304,7 +304,7 @@ a.chip:hover {
   /* 顔が見出し・左のぼかしと重ならないよう、写真を右へずらして置く（cover だけでは右へ寄せきれないため） */
   .hero-visual__photo img {
     left: auto;
-    right: -50px;
+    right: -62px;
     width: auto;
     max-width: none;
   }
@@ -312,8 +312,8 @@ a.chip:hover {
     background: linear-gradient(to right, rgb(250 246 240 / 0.95) 0%, rgb(250 246 240 / 0.8) 30%, rgb(250 246 240 / 0) 52%);
   }
   .hero-visual__inner { padding-bottom: 0; }
-  /* 見出しは顔の下（写真の下側）に置き、顔と重ねない */
-  .hero-visual__text { min-height: 230px; align-items: flex-end; padding: 0 0 1.25rem 0.25rem; }
+  /* 見出しは写真の見えている部分の縦の真ん中（okina 2026-11-04）。顔は写真を右へずらして見出しと重ねない */
+  .hero-visual__text { min-height: 230px; padding-left: 0.25rem; }
 }
 
 /* 番号付きの手順（エリアから探す：都道府県 → 市区町村 → 施設） */
