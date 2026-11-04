@@ -15,6 +15,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import type { Corporation, Facility } from "./db";
 import { isValidJapanLatLng } from "./geo";
+import { GSI_CREDIT_HTML, detailMap, mapEnabled, thumbMap } from "./gsimap";
 import { facilityRobots, isIndexableFacility, listRobots, type RobotsDirective } from "./indexing";
 import { CAPACITY_OK_SQL } from "./capacity";
 import { NOT_A_RECOMMENDATION } from "./ranking";
@@ -275,7 +276,7 @@ function sourceNote(acquiredOn: string | null | undefined): string {
   );
 }
 
-function facilityTable(rows: Facility[], opt: { hideCity?: boolean; hideCorp?: boolean }): string {
+function facilityTable(rows: Facility[], opt: { hideCity?: boolean; hideCorp?: boolean; showMap?: boolean }): string {
   if (rows.length === 0) {
     return `<p class="card px-4 py-10 text-center text-sm text-muted">該当する施設はありません。</p>`;
   }
@@ -283,6 +284,7 @@ function facilityTable(rows: Facility[], opt: { hideCity?: boolean; hideCorp?: b
   let s =
     `<div class="card hidden md:block"><table class="dtable w-full border-collapse text-sm"><thead>` +
     `<tr class="border-b border-line-strong text-left text-xs text-muted">` +
+    (opt.showMap ? `<th scope="col" class="w-32 py-2 pr-3 font-medium">地図</th>` : "") +
     `<th scope="col" class="py-2 pr-3 font-medium">事業所名</th>` +
     `<th scope="col" class="w-48 py-2 pr-3 font-medium">種別</th>` +
     (opt.hideCity ? "" : `<th scope="col" class="w-40 py-2 pr-3 font-medium">市区町村</th>`) +
@@ -293,6 +295,7 @@ function facilityTable(rows: Facility[], opt: { hideCity?: boolean; hideCorp?: b
     const ch = f.pref_slug && f.city_slug ? `/area/${seg(f.pref_slug)}/${seg(f.city_slug)}/` : null;
     s +=
       `<tr class="border-b border-line align-top hover:bg-tint">` +
+      (opt.showMap ? `<td class="py-2 pr-3">${thumbMap(f.lat, f.lng, f.name)}</td>` : "") +
       `<td class="py-2 pr-3">${link(`/facility/${seg(f.id)}/`, "font-medium text-ink underline-offset-2 hover:text-accent hover:underline", kids(f.name)).s}</td>` +
       `<td class="py-2 pr-3 text-muted">${link(`/type/${seg(f.service_type_slug)}/`, "hover:text-accent hover:underline", kids(f.service_type)).s}</td>` +
       (opt.hideCity
@@ -313,16 +316,16 @@ function facilityTable(rows: Facility[], opt: { hideCity?: boolean; hideCorp?: b
   s += `</tbody></table></div><ul class="space-y-3 md:hidden">`;
   for (const f of rows) {
     s +=
-      `<li class="card p-4">` +
+      `<li class="card p-4"><div class="flex items-start gap-3"><div class="min-w-0 flex-1">` +
       link(`/facility/${seg(f.id)}/`, "font-medium text-ink underline-offset-2 hover:underline", kids(f.name)).s +
       `<dl class="mt-2 grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-xs">` +
       `<dt class="text-muted">種別</dt><dd>${kids(f.service_type)}</dd>` +
       `<dt class="text-muted">市区町村</dt><dd>${kids([f.prefecture, f.city].filter(Boolean).join(" ") || NO_DATA)}</dd>` +
       `<dt class="text-muted">定員</dt><dd class="tabular-nums">${kids(cap(f))}</dd>` +
       `<dt class="text-muted">法人</dt><dd>${kids(f.corporation_name || noData)}</dd>` +
-      `</dl></li>`;
+      `</dl></div>${opt.showMap ? thumbMap(f.lat, f.lng, f.name) : ""}</div></li>`;
   }
-  s += `</ul>`;
+  s += `</ul>` + (opt.showMap ? GSI_CREDIT_HTML : "");
   return s;
 }
 
@@ -514,6 +517,7 @@ export async function renderFacility(db: D1Database, id: string, shell: DirectSh
     breadcrumb(crumbs) +
     `<p class="eyebrow">${kids(f.service_type)}</p>` +
     `<h1 class="mt-3 mb-8">${kids(f.name)}</h1>` +
+    (hasGeo && mapEnabled(f) ? `<div class="mb-8">${detailMap(f.lat, f.lng, f.name, f.address)}${GSI_CREDIT_HTML}</div>` : "") +
     `<dl class="card mb-8">` +
     row("サービス種別", link(`/type/${seg(f.service_type_slug)}/`, "text-accent hover:underline", kids(f.service_type)).s) +
     row(
@@ -555,7 +559,7 @@ export async function renderFacility(db: D1Database, id: string, shell: DirectSh
   if (neighbors.length > 0) {
     main +=
       `<section class="reveal mb-6"><h2 class="mb-4">${kids("同じ", f.city ?? "市区町村", "の施設", raw(`<span class="ml-2 text-xs font-normal text-muted">${kids(neighbors.length, "件")}</span>`))}</h2>` +
-      facilityTable(neighbors, { hideCity: true }) +
+      facilityTable(neighbors, { hideCity: true, showMap: mapEnabled(f) }) +
       (f.pref_slug && f.city_slug
         ? `<p class="mt-3 text-xs">${link(`/area/${seg(f.pref_slug)}/${seg(f.city_slug)}/`, "text-accent hover:underline", kids(f.prefecture, f.city, "の施設一覧 →")).s}</p>`
         : "") +
@@ -703,7 +707,7 @@ function median(values: number[]): number | null {
   return Math.round(v * 10) / 10;
 }
 
-function typeCityTable(rows: Facility[]): string {
+function typeCityTable(rows: Facility[], showMap: boolean): string {
   const cap = (f: Facility) => (f.capacity == null ? noData.s : `<span class="tabular-nums">${kids(f.capacity, "人")}</span>`);
   const corp = (f: Facility) =>
     f.corporation_name
@@ -714,6 +718,7 @@ function typeCityTable(rows: Facility[]): string {
   let s =
     `<div class="card hidden md:block"><table class="dtable w-full border-collapse text-sm"><thead>` +
     `<tr class="border-b border-line-strong text-left text-xs text-muted">` +
+    (showMap ? `<th scope="col" class="w-32 py-2 pr-3 font-medium">地図</th>` : "") +
     `<th scope="col" class="py-2 pr-3 font-medium">事業所名</th>` +
     `<th scope="col" class="py-2 pr-3 font-medium">所在地</th>` +
     `<th scope="col" class="w-20 py-2 pr-3 text-right font-medium">定員</th>` +
@@ -722,6 +727,7 @@ function typeCityTable(rows: Facility[]): string {
   for (const f of rows) {
     s +=
       `<tr class="border-b border-line align-top hover:bg-tint">` +
+      (showMap ? `<td class="py-2 pr-3">${thumbMap(f.lat, f.lng, f.name)}</td>` : "") +
       `<td class="py-2 pr-3">${link(`/facility/${seg(f.id)}/`, "font-medium text-ink underline-offset-2 hover:text-accent hover:underline", kids(f.name)).s}</td>` +
       `<td class="py-2 pr-3 text-muted">${f.address ? kids(f.address) : noData.s}</td>` +
       `<td class="py-2 pr-3 text-right">${cap(f)}</td>` +
@@ -731,15 +737,15 @@ function typeCityTable(rows: Facility[]): string {
   s += `</tbody></table></div><ul class="space-y-3 md:hidden">`;
   for (const f of rows) {
     s +=
-      `<li class="card p-4">` +
+      `<li class="card p-4"><div class="flex items-start gap-3"><div class="min-w-0 flex-1">` +
       link(`/facility/${seg(f.id)}/`, "font-medium text-ink underline-offset-2 hover:underline", kids(f.name)).s +
       `<dl class="mt-2 grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-xs">` +
       `<dt class="text-muted">所在地</dt><dd>${f.address ? kids(f.address) : noData.s}</dd>` +
       `<dt class="text-muted">定員</dt><dd>${cap(f)}</dd>` +
       `<dt class="text-muted">運営法人</dt><dd>${corp(f)}</dd>` +
-      `</dl></li>`;
+      `</dl></div>${showMap ? thumbMap(f.lat, f.lng, f.name) : ""}</div></li>`;
   }
-  s += `</ul>`;
+  s += `</ul>` + (showMap ? GSI_CREDIT_HTML : "");
   return s;
 }
 
@@ -883,7 +889,7 @@ export async function renderTypeCity(
   main +=
     `<section class="mb-10"><h2 class="mb-4">${kids("施設一覧", raw(`<span class="ml-2 text-xs font-normal text-muted">${esc(fmtNum(n))}件</span>`))}</h2>` +
     `<p class="mb-4 text-xs leading-relaxed text-muted">${kids("事業所名の順に表示しています。", raw(`<span class="ml-1 font-bold text-ink">${esc(NOT_A_RECOMMENDATION)}</span>`))}</p>` +
-    typeCityTable(rows) +
+    typeCityTable(rows, mapEnabled({ prefecture: prefName, city: cityName })) +
     `<p class="mt-4 text-xs text-muted">${esc(`定員・公式URL・運営法人が「${NO_DATA}」の施設は、出典データに記載がないものです（当サイトで推定した値は掲載していません）。`)}</p>` +
     `</section>`;
 

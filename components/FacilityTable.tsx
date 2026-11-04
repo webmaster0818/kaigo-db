@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Facility } from "@/lib/db";
 import { formatDistance } from "@/lib/geo";
 import { NO_DATA, seg } from "@/lib/site";
+import { GSI_CREDIT_HTML, thumbMap } from "@/lib/gsimap";
 
 export type FacilityRow = Facility & { distance_km?: number };
 
@@ -15,6 +16,8 @@ interface Props {
   hideCity?: boolean;
   /** 法人列を隠す（法人ページ） */
   hideCorp?: boolean;
+  /** 小さな地図を出す（lib/gsimap.ts の mapEnabled に当たる一覧だけ true） */
+  showMap?: boolean;
 }
 
 function cityHref(f: Facility): string | null {
@@ -27,7 +30,7 @@ function cityHref(f: Facility): string | null {
  * - PC: 1行1施設の表（数字が縦に揃うことを優先。装飾は罫線のみ）
  * - スマホ: 横スクロールさせずカードに切り替える
  */
-export default function FacilityTable({ rows, showDistance, hideType, hideCity, hideCorp }: Props) {
+export default function FacilityTable({ rows, showDistance, hideType, hideCity, hideCorp, showMap }: Props) {
   if (rows.length === 0) {
     return (
       <p className="card px-4 py-10 text-center text-sm text-muted">
@@ -43,6 +46,7 @@ export default function FacilityTable({ rows, showDistance, hideType, hideCity, 
         <table className="dtable w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line-strong text-left text-xs text-muted">
+              {showMap && <th scope="col" className="w-32 py-2 pr-3 font-medium">地図</th>}
               {showDistance && <th scope="col" className="w-20 py-2 pr-3 font-medium">距離</th>}
               <th scope="col" className="py-2 pr-3 font-medium">事業所名</th>
               {!hideType && <th scope="col" className="w-48 py-2 pr-3 font-medium">種別</th>}
@@ -56,6 +60,7 @@ export default function FacilityTable({ rows, showDistance, hideType, hideCity, 
               const ch = cityHref(f);
               return (
                 <tr key={f.id} className="border-b border-line align-top hover:bg-tint">
+                  {showMap && <td className="py-2 pr-3" dangerouslySetInnerHTML={{ __html: thumbMap(f.lat, f.lng, f.name) }} />}
                   {showDistance && (
                     <td className="py-2 pr-3 tabular-nums text-muted">
                       {f.distance_km == null ? NO_DATA : formatDistance(f.distance_km)}
@@ -109,6 +114,8 @@ export default function FacilityTable({ rows, showDistance, hideType, hideCity, 
       <ul className="space-y-3 md:hidden">
         {rows.map((f) => (
           <li key={f.id} className="card p-4">
+            <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
             <Link href={`/facility/${seg(f.id)}/`} className="font-medium text-ink underline-offset-2 hover:underline">
               {f.name}
             </Link>
@@ -128,9 +135,13 @@ export default function FacilityTable({ rows, showDistance, hideType, hideCity, 
               <dt className="text-muted">法人</dt>
               <dd>{f.corporation_name || <span className="text-muted-2">{NO_DATA}</span>}</dd>
             </dl>
+            </div>
+            {showMap && <div dangerouslySetInnerHTML={{ __html: thumbMap(f.lat, f.lng, f.name) }} />}
+            </div>
           </li>
         ))}
       </ul>
+      {showMap && <div dangerouslySetInnerHTML={{ __html: GSI_CREDIT_HTML }} />}
     </>
   );
 }

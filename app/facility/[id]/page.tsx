@@ -8,6 +8,7 @@ import { abs, decodeParam, NO_DATA, orNoData, seg } from "@/lib/site";
 import Breadcrumb from "@/components/Breadcrumb";
 import FacilityTable from "@/components/FacilityTable";
 import SourceNote from "@/components/SourceNote";
+import { GSI_CREDIT_HTML, detailMap, mapEnabled } from "@/lib/gsimap";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,7 @@ export default async function FacilityPage({ params }: { params: Params }) {
 
       <p className="eyebrow">{f.service_type}</p>
       <h1 className="mt-3 mb-8">{f.name}</h1>
+      {hasGeo && mapEnabled(f) && <div className="mb-8" dangerouslySetInnerHTML={{ __html: detailMap(f.lat, f.lng, f.name, f.address) + GSI_CREDIT_HTML }} />}
 
       <dl className="card mb-8">
         <Row label="サービス種別">
@@ -193,7 +195,7 @@ export default async function FacilityPage({ params }: { params: Params }) {
             同じ{f.city ?? "市区町村"}の施設
             <span className="ml-2 text-xs font-normal text-muted">{neighbors.length}件</span>
           </h2>
-          <FacilityTable rows={neighbors} hideCity />
+          <FacilityTable rows={neighbors} hideCity showMap={mapEnabled(f)} />
           {f.pref_slug && f.city_slug && (
             <p className="mt-3 text-xs">
               <Link href={`/area/${seg(f.pref_slug)}/${seg(f.city_slug)}/`} className="text-accent hover:underline">

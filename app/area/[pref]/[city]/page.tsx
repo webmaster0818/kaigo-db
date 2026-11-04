@@ -9,6 +9,7 @@ import { listRobots } from "@/lib/indexing";
 import { qualifiesTypeCity, TYPE_CITY_LABELS, typeCityPath } from "@/lib/typeCity";
 import Breadcrumb from "@/components/Breadcrumb";
 import FacilityTable from "@/components/FacilityTable";
+import { mapEnabled } from "@/lib/gsimap";
 import SourceNote from "@/components/SourceNote";
 import EmptyState from "@/components/EmptyState";
 
@@ -165,7 +166,7 @@ export default async function CityPage({
             <span className="ml-1 font-bold text-ink">{NOT_A_RECOMMENDATION}</span>
           </p>
 
-          <FacilityTable rows={rows} hideCity />
+          <FacilityTable rows={rows} hideCity showMap={mapEnabled({ prefecture: prefName, city: cityName })} />
 
           {(area?.facility_count ?? 0) > LIST_LIMIT && (
             <p className="mt-3 text-xs text-muted">
