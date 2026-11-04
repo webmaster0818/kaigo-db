@@ -157,21 +157,23 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           01 ファーストビュー（見出し → すぐ検索フォーム）
           サイトの説明文（「記載なし」・推測で補完しない・口コミ等を載せない）は 08 の掲載データの節に移した。
           ===================================================================== */}
-      <section className="pt-1 md:pt-4">
-        <HeroVisual>
+      <section>
+        <HeroVisual
+          search={
+            <div id="search" className="scroll-mt-24">
+              <PlaceSearchForm
+                types={types}
+                defaults={{ q: qRaw, lat: latRaw, lng: lngRaw, radius: radiusRaw, type: typeRaw, sort }}
+              />
+            </div>
+          }
+        >
           <h1 className="text-[1.3rem] leading-[1.5] md:text-[2.5rem]">
             公表データにもとづく
             <br />
             介護施設の検索
           </h1>
         </HeroVisual>
-
-        <div id="search" className="scroll-mt-24">
-          <PlaceSearchForm
-            types={types}
-            defaults={{ q: qRaw, lat: latRaw, lng: lngRaw, radius: radiusRaw, type: typeRaw, sort }}
-          />
-        </div>
       </section>
 
       {/* ---- 検索結果 ---- */}
