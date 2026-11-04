@@ -780,3 +780,12 @@ a.chip:hover {
 .gsimap--none { background: var(--color-tint, #f4eee5); }
 .gsimap-credit { margin-top: 0.5rem; font-size: 11px; color: var(--color-muted, #7a7168); }
 .gsimap-credit a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* 拡大・縮小できる地図（Leaflet に差し替えた後）。ピンと吹き出しはマーカーの中に置く */
+.gsimap--detail.gsimap-live .leaflet-tile-pane { filter: grayscale(0.85) contrast(0.85) brightness(1.06); }
+.gsimap--detail.gsimap-live { background: #f1eee8; }
+.gsimap-live-icon { background: none; border: 0; }
+.gsimap--detail.gsimap-live .gsimap-pin { position: absolute; left: 0; top: 0; transform: none; }
+.gsimap--detail.gsimap-live .gsimap-bubble { left: 17px; top: 0; transform: translate(-50%, calc(-100% - 10px)); width: max-content; max-width: 280px; }
+.gsimap--detail.gsimap-live .gsimap-open { z-index: 1000; }
+.gsimap--detail.gsimap-live a.gsimap-open { color: var(--color-ink); font: 12px/1.5 var(--font-sans); }

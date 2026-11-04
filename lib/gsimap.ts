@@ -62,8 +62,26 @@ export function gsiMapHtml(
         // 国土地理院の地図（拡大・移動できる。無料）で同じ地点を開く
         `<a class="gsimap-open" href="https://maps.gsi.go.jp/#${z}/${lat!.toFixed(6)}/${lng!.toFixed(6)}/" target="_blank" rel="noopener">大きな地図で見る（地理院地図）</a>`
       : "") +
-    `</div>`
+    `</div>` +
+    (opt.bubble ? liveScript(lat!, lng!, z) : "")
   );
+}
+
+/**
+ * 詳細ページの地図を、ページ内で拡大・縮小・移動できる地図に差し替える（okina 2026-11-04）。
+ * Leaflet（BSD-2・unpkg から読み込み）に同じ地理院タイルを載せ、ピン・吹き出しはそのまま重ねる。
+ * 読み込めなかったときは、上の静止画の地図がそのまま残る。スマホは1本指のスクロールを妨げないよう、移動は ＋／− ボタンと2本指で行う。
+ */
+function liveScript(lat: number, lng: number, z: number): string {
+  return `<script>(function(){var el=document.currentScript.previousElementSibling;if(!el)return;` +
+    `function init(){var L=window.L;if(!L)return;var pin=el.querySelector(".gsimap-pin"),bub=el.querySelector(".gsimap-bubble"),btn=el.querySelector(".gsimap-open");` +
+    `var html=(pin?pin.outerHTML:"")+(bub?bub.outerHTML:"");el.innerHTML="";el.classList.add("gsimap-live");` +
+    `var m=L.map(el,{center:[${lat},${lng}],zoom:${z},minZoom:5,maxZoom:18,attributionControl:false,scrollWheelZoom:false,dragging:!L.Browser.mobile,tap:false});` +
+    `L.tileLayer("${TILE}/{z}/{x}/{y}.png",{maxZoom:18}).addTo(m);` +
+    `L.marker([${lat},${lng}],{icon:L.divIcon({className:"gsimap-live-icon",html:html,iconSize:[34,46],iconAnchor:[17,46]}),keyboard:false,interactive:false}).addTo(m);` +
+    `if(btn)el.appendChild(btn);}` +
+    `if(window.L)return init();var c=document.createElement("link");c.rel="stylesheet";c.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";document.head.appendChild(c);` +
+    `var s=document.createElement("script");s.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";s.onload=init;document.head.appendChild(s);})();</script>`;
 }
 
 /** 一覧用の小さな地図 */
